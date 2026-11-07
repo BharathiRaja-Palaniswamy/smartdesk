@@ -8,7 +8,7 @@ of the app asks for a job ("chat-default", "judge"), never for a provider.
     providers.py  provider -> its LangChain chat model; the only file that names a provider's library
     errors.py     every provider's errors -> one ModelError with a kind
     usage.py      tokens, time and estimated cost of each call, logged the same way
-    tools.py      a tool written once (Tool), and running the model's requests for it
+    tools.py      a tool written once (make_tool: a LangChain StructuredTool), and running the model's requests for it
     structured.py replies in a fixed shape, by each provider's own method
     gateway.py    chat(), structured() and stream(): the calls the app makes
 
@@ -18,7 +18,7 @@ would share this with the chat.
 
 from .errors import ModelError
 from .gateway import Reply, Structured, chat, stream, structured
-from .tools import Tool, run_requests
+from .tools import make_tool, run_requests
 from .usage import Usage
 
-__all__ = ["ModelError", "Reply", "Structured", "Tool", "Usage", "chat", "run_requests", "stream", "structured"]
+__all__ = ["ModelError", "Reply", "Structured", "Usage", "chat", "make_tool", "run_requests", "stream", "structured"]

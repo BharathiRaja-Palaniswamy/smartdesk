@@ -1,42 +1,39 @@
-"""Tools in one form, whichever provider the model comes from.
+"""Tools in one form, whichever provider the model comes from: LangChain's StructuredTool.
 
 A tool is a function the model may ask the app to run (the model never runs
-code itself). Each provider wants tools described in its own format and
-returns its requests in its own format. Here a tool is written once, as a
-Tool: a name, a description, its inputs as a JSON schema, and the function
-that runs it. LangChain converts that description for each provider, and
-gives every provider's requests back the same way, as `{"name", "args",
-"id"}`, so `run_requests` below works for any of them.
+code itself). `make_tool` turns one of ours into a LangChain `StructuredTool`:
+a name, a description (how the model decides to call it), its inputs as a
+JSON schema, and the function that runs it. LangChain then describes it to
+each provider in that provider's own format (`bind_tools`), and gives every
+provider's requests back the same way, `{"name", "args", "id"}`.
 
-The same Tool objects can serve the chat now and a voice assistant later:
-neither the tool nor the code that runs it knows which one asked.
+`run_requests` runs those requests with `tool.invoke`, which returns each
+result as a ToolMessage tied to its request by id, and records each run as
+its own step in a LangSmith trace.
+
+The inputs' JSON schema is a description for the model; LangChain does not
+check it (a model can leave a "required" input out), so each tool's own code
+checks what it is given.
 """
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
 
 from langchain_core.messages import ToolMessage
+from langchain_core.tools import BaseTool, StructuredTool
 
 
-@dataclass(frozen=True)
-class Tool:
-    """A function the model can ask for, described so any provider understands it."""
-
-    name: str  # e.g. "get_report"
-    description: str  # when to use it; this is how the model decides to call it
-    parameters: dict[str, Any]  # its inputs, as a JSON schema of type "object"
-    run: Callable[[dict[str, Any]], Any]  # takes the model's inputs, returns something JSON can hold
-
-    def description_for_model(self) -> dict[str, Any]:
-        """The tool as sent to a model: the OpenAI "function" format, which
-        LangChain converts for every other provider (Anthropic included)."""
-        return {"type": "function",
-                "function": {"name": self.name, "description": self.description, "parameters": self.parameters}}
+def make_tool(name: str, description: str, parameters: dict[str, Any],
+              run: Callable[[dict[str, Any]], Any]) -> StructuredTool:
+    """A LangChain tool that runs `run` with the model's inputs as one dict.
+    `parameters` is the inputs' JSON schema, of type "object"; `run` returns
+    something JSON can hold."""
+    return StructuredTool.from_function(func=lambda **args: run(args), name=name, description=description,
+                                        args_schema=parameters)
 
 
-def run_requests(requests: list[dict[str, Any]], tools: list[Tool]) -> list[ToolMessage]:
+def run_requests(requests: list[dict[str, Any]], tools: list[BaseTool]) -> list[ToolMessage]:
     """Run each tool request (`{"name", "args", "id"}`) and return its result
     as a ToolMessage, tied to the request by id. Every request gets a result,
     because a model's next call is refused when one is missing; a request for
@@ -45,6 +42,10 @@ def run_requests(requests: list[dict[str, Any]], tools: list[Tool]) -> list[Tool
     results = []
     for request in requests:
         tool = by_name.get(request["name"])
-        output = tool.run(request["args"]) if tool else {"error": f"There is no tool called {request['name']}."}
-        results.append(ToolMessage(json.dumps(output), tool_call_id=request["id"]))
+        if tool is None:
+            error = json.dumps({"error": f"There is no tool called {request['name']}."})
+            results.append(ToolMessage(error, tool_call_id=request["id"], name=request["name"]))
+            continue
+        results.append(tool.invoke({"type": "tool_call", "name": request["name"], "args": request["args"],
+                                    "id": request["id"]}))
     return results

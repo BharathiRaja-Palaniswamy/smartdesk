@@ -32,13 +32,13 @@ from typing import TypeVar
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages import AIMessage, AIMessageChunk
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
 from . import structured as shapes
 from .errors import ModelError, normalize
 from .profiles import ModelSpec, Profile, get_profile
 from .providers import build
-from .tools import Tool
 from .usage import Usage, record, usage_of
 
 Result = TypeVar("Result")
@@ -120,7 +120,7 @@ def chat(profile: str, messages: LanguageModelInput) -> Reply:
 
 
 def structured(profile: str, messages: LanguageModelInput, shape: type[BaseModel],
-               tools: list[Tool] | None = None, answer_now: bool = False) -> Structured:
+               tools: list[BaseTool] | None = None, answer_now: bool = False) -> Structured:
     """Ask for an answer in `shape`, with `tools` on offer. One call ends
     either in the answer or in requests for tools; the caller runs those
     (tools.run_requests), adds them to the conversation and asks again.

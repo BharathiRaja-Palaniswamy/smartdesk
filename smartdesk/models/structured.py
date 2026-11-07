@@ -41,10 +41,10 @@ from typing import Any
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ValidationError
 
 from .errors import ModelError
-from .tools import Tool
 
 ANSWER = "answer"  # the tool that carries the reply
 
@@ -109,7 +109,7 @@ def _read(message: AIMessage, schema: type[BaseModel], model: str) -> tuple[Base
         raise ModelError("bad_output", model, f"the reply does not fit {schema.__name__}: {error}") from error
 
 
-def ask(model: BaseChatModel, messages: LanguageModelInput, schema: type[BaseModel], tools: list[Tool],
+def ask(model: BaseChatModel, messages: LanguageModelInput, schema: type[BaseModel], tools: list[BaseTool],
         answer_now: bool = False, config: RunnableConfig | None = None, name: str = ""
         ) -> tuple[AIMessage, BaseModel | None, list[dict]]:
     """Ask `model` for a reply in `schema`'s shape, with `tools` on offer. With
@@ -118,8 +118,7 @@ def ask(model: BaseChatModel, messages: LanguageModelInput, schema: type[BaseMod
     the model's message, the reply (None while it asks for tools) and its
     requests for tools. `name` ("provider:model") is for the error message."""
     if tools and not answer_now:
-        offered = [tool.description_for_model() for tool in tools]
-        message = model.bind_tools([*offered, _answer_tool(schema)], tool_choice="auto").invoke(messages, config=config)
+        message = model.bind_tools([*tools, _answer_tool(schema)], tool_choice="auto").invoke(messages, config=config)
         try:
             return message, *_read(message, schema, name)
         except ModelError:

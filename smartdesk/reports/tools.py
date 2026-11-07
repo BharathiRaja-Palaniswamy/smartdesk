@@ -15,9 +15,10 @@ the same code that fills the Reports tab (reports/report.py).
 from datetime import date
 from typing import Any
 
+from langchain_core.tools import StructuredTool
 from langsmith import traceable
 
-from ..models.tools import Tool
+from ..models.tools import make_tool
 from .dataset import Dataset
 from .report import build_report
 
@@ -28,7 +29,7 @@ TOOL_NAME = "get_report"
 MAX_TOOL_ROUNDS = 4
 
 
-def report_tool(dataset: Dataset) -> Tool:
+def report_tool(dataset: Dataset) -> StructuredTool:
     """The tool, in the gateway's provider-neutral form (models/tools.py): its
     name, when to use it, its inputs as a JSON schema, and the function that
     runs it.
@@ -39,7 +40,7 @@ def report_tool(dataset: Dataset) -> Tool:
     for one that does not exist.
     """
     options = dataset.filter_options()
-    return Tool(
+    return make_tool(
         name=TOOL_NAME,
         description=(
             "Get the business's figures for a period: bookings, completed bookings, revenue, revenue "

@@ -27,6 +27,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from ..access.permissions import Role, allowed
@@ -38,7 +39,7 @@ from ..booking.schedule import read_schedule
 from ..business.store import get_knowledge
 from ..config import get_settings
 from ..search.retriever import get_retriever
-from ..models import Tool, structured
+from ..models import make_tool, structured
 from ..search.errors import ModelUnavailable
 from .booking import BookingRequest, describe, handle, missing_result
 from .debug import brief, note
@@ -309,23 +310,23 @@ def handoff_reason(args: dict[str, Any], words: str) -> str:
     return given or f"No reason given by the agent. The customer said: {words[-300:]}"
 
 
-def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = "") -> list[Tool]:
+def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = "") -> list[BaseTool]:
     """The tools `role` may use, made for the customer with this name and number.
     `words`: what the customer has written so far (collect.customer_words)."""
     tools = [
-        Tool("search_guide",
+        make_tool("search_guide",
              "Searches the business's guide (services, prices, team, hours, policies, suitability, offers, packages). "
              "Use it for any fact about the business before you state it.",
              {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]},
              search_guide),
-        Tool("booking",
+        make_tool("booking",
              "Anything about bookings: a new booking, changing or cancelling one, their bookings, when someone "
              "is free. Call it once you have every detail from the customer (for a booking: the service they "
              "named, the day and the time), not for each one. The system then reads the details back to them "
              "and shows the times found for their yes; anything else it answers, tell them in your words.",
              booking_parameters(),
              guarded(lambda args: booking(args, name, phone, words))),
-        Tool("record_feedback",
+        make_tool("record_feedback",
              "Passes feedback about a visit (praise, a complaint, a suggestion, how they felt) to the Feedback "
              "agent, which answers the customer itself. Not for questions or requests.",
              {"type": "object", "properties": {
@@ -334,7 +335,7 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
                                                            "question: the card it gave (e.g. FB-1A2B3C)."}},
               "required": ["words"]},
              lambda args: give_feedback(name, phone, args["words"], args.get("card", ""))),
-        Tool("hand_off",
+        make_tool("hand_off",
              "Asks the business's staff to call this customer back. Use it when they ask for a person, have a "
              "health question the guide does not settle, want something you cannot do (a class, a group), "
              "or booking keeps failing (feedback, complaints included, goes to record_feedback). Say why, in one "

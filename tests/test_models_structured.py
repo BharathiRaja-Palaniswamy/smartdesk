@@ -15,9 +15,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-from smartdesk.models import ModelError, Tool, providers, run_requests, structured
+from smartdesk.models import ModelError, make_tool, providers, run_requests, structured
 from smartdesk.models.structured import ANSWER, ask
-from smartdesk.reports.routes import get_dataset
+from smartdesk.reports.dataset import get_dataset
 from smartdesk.reports.tools import report_tool
 from tests.standins import StandIn
 
@@ -29,9 +29,9 @@ class Shape(BaseModel):
     covered: bool
 
 
-OPENING = Tool(name="opening_hours", description="The hours for one day.",
-               parameters={"type": "object", "properties": {"day": {"type": "string"}}, "required": ["day"]},
-               run=lambda args: {"day": args["day"], "hours": "9:00 AM – 7:00 PM"})
+PARAMETERS = {"type": "object", "properties": {"day": {"type": "string"}}, "required": ["day"]}
+OPENING = make_tool(name="opening_hours", description="The hours for one day.", parameters=PARAMETERS,
+                    run=lambda args: {"day": args["day"], "hours": "9:00 AM – 7:00 PM"})
 
 
 def request(name: str, args: dict, call_id: str = "call-1") -> dict:
@@ -57,20 +57,20 @@ def plays(monkeypatch):
 
 def test_a_tool_is_written_once_and_each_provider_gets_its_own_format(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-a-real-one")
-    claude = ChatAnthropic(model="claude-opus-5-5", max_tokens=100).bind_tools([OPENING.description_for_model()])
+    claude = ChatAnthropic(model="claude-opus-5-5", max_tokens=100).bind_tools([OPENING])
     open_model = ChatOpenAI(model="Qwen/x", api_key="test", base_url="https://nebius.example/v1/") \
-        .bind_tools([OPENING.description_for_model()])
+        .bind_tools([OPENING])
     to_claude = claude.bound._get_request_payload([HumanMessage("hi")], **claude.kwargs)["tools"][0]
     to_open = open_model.bound._get_request_payload([HumanMessage("hi")], **open_model.kwargs)["tools"][0]
     assert to_claude == {"name": "opening_hours", "description": "The hours for one day.",
-                         "input_schema": OPENING.parameters}
+                         "input_schema": PARAMETERS}
     assert to_open == {"type": "function", "function": {"name": "opening_hours",
-                       "description": "The hours for one day.", "parameters": OPENING.parameters}}
+                       "description": "The hours for one day.", "parameters": PARAMETERS}}
 
 
 def test_the_report_tool_is_a_neutral_tool_that_runs_the_report():
     tool = report_tool(get_dataset())
-    assert tool.name == "get_report" and tool.parameters["required"] == ["start", "end"]
+    assert tool.name == "get_report" and tool.args_schema["required"] == ["start", "end"]
     assert tool.run({"start": "2026-09-01", "end": "2026-09-30"})["summary"]["revenue"] > 0
 
 
@@ -94,7 +94,7 @@ def sent(monkeypatch):
             raise Sent(self._get_request_payload(messages, stop=stop, **kwargs))
         monkeypatch.setattr(chat_model, "_generate", capture)
 
-    def requests(tools: list[Tool], answer_now: bool = False) -> list[dict]:
+    def requests(tools: list, answer_now: bool = False) -> list[dict]:
         payloads = []
         for model in (ChatAnthropic(model="claude-opus-5-5", api_key="test"),
                       ChatOpenAI(model="Qwen/x", api_key="test", base_url="https://nebius.example/v1/")):
@@ -210,3 +210,21 @@ def test_a_reply_missing_a_field_is_asked_for_again_with_the_shape_enforced(monk
     monkeypatch.setenv("SMARTDESK_MODEL_FALLBACK", "")
     result = structured("chat-default", "When do you open?", Shape, [OPENING])
     assert result.reply == Shape(answer="We open at 9.", covered=True) and result.tool_calls == []
+
+
+def test_each_tool_run_is_its_own_step_in_a_trace():
+    from langchain_core.callbacks import BaseCallbackHandler
+    from langchain_core.runnables import RunnableLambda
+
+    class ToolSteps(BaseCallbackHandler):
+        def __init__(self):
+            self.names = []
+
+        def on_tool_start(self, serialized, input_str, **kwargs):
+            self.names.append(serialized["name"])
+
+    steps = ToolSteps()
+    # Inside a graph node or chain step, as the agents run them: the tool run is recorded under it.
+    RunnableLambda(lambda _: run_requests([request("opening_hours", {"day": "Sunday"})], [OPENING])).invoke(
+        None, config={"callbacks": [steps]})
+    assert steps.names == ["opening_hours"]

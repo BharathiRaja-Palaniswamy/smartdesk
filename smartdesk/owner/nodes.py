@@ -9,10 +9,11 @@ changed, one job per node, so a trace shows each step on its own:
   next_step  not a node: after `agent`, decides between `tools` and the end
 """
 
+from langchain_core.tools import BaseTool
 from langgraph.graph import END
 from pydantic import BaseModel
 
-from ..models import Tool, run_requests, structured
+from ..models import run_requests, structured
 from ..reports.tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label
 from ..search.retriever import get_retriever
 from .prompt import PROMPT, prompt_values
@@ -31,7 +32,7 @@ def prepare(state: OwnerState, instructions: str) -> dict:
             "rounds": 0, "requests": [], "reply": None}
 
 
-def agent(state: OwnerState, profile: str, shape: type[BaseModel], offered: list[Tool]) -> dict:
+def agent(state: OwnerState, profile: str, shape: type[BaseModel], offered: list[BaseTool]) -> dict:
     """One model call, through the gateway, with the whole conversation so far.
     It ends in the reply (in `shape`) or in requests for the tools offered;
     the gateway sorts out which, whatever provider answered. Once the tool
@@ -41,7 +42,7 @@ def agent(state: OwnerState, profile: str, shape: type[BaseModel], offered: list
     return {"messages": [answer.message], "requests": answer.tool_calls, "reply": answer.reply}
 
 
-def tools(state: OwnerState, offered: list[Tool]) -> dict:
+def tools(state: OwnerState, offered: list[BaseTool]) -> dict:
     """Run every tool the model asked for. Each result goes back tied to its
     request by id, which is how the model knows which result answers which
     request."""
