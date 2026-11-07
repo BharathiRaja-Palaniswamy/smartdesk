@@ -249,6 +249,32 @@ Rules:
 - A phone number is detached, never released (re-buying costs money and loses the number).
 - Calendar bookings are never touched; test bookings carry a test tag and have their own cleanup.
 
+### Admin console (SmartDesk monitoring its clients)
+
+For SmartDesk's own team, not business owners. It shows every business's
+**health**, never its **content** (D19).
+
+- **Reads the registry only.** Each cell reports a small summary to the
+  registry after anything changes (a document processed, a go-live, a chat,
+  an error); the admin console never opens a cell's database, so its code
+  path cannot reach documents, customers or chats.
+- **The list**: business and type; status (draft · live · paused · resetting
+  · deleting · failed); created and live since; documents and services
+  (with "price missing" count); channels (widget domain, phone, calendar);
+  activity over 7 days (chats, bookings, open hand-offs, last chat); health
+  over 24 hours (errors, reply time p95); cost today against the budget; a
+  link to its trace project. Failed and paused first; filter by status;
+  search by name.
+- **Actions, all logged**: pause and resume the assistant (kill switch);
+  retry a failed go-live, reset or delete; reset or delete with the same
+  typed confirmation; open traces.
+- **Support access** is the only way to see a business's content: a stated
+  reason, time-limited, logged, and visible to the owner. There is no "log
+  in as this business".
+- **Sign-in**: a separate admin role with a second factor; admin pages on
+  their own path, never reachable with a widget key or an owner's session;
+  rate limited.
+
 ## 7. Security
 
 Security is designed in from M1, not added later: SmartDesk holds other
@@ -263,6 +289,7 @@ below, with how it could be attacked here and the defence.
 | **4. Tools and actions** | **Excessive agency**: cancelling someone else's booking | Tools are made bound to the business and customer; the AI cannot choose whose booking · permissions table by role · every booking change needs the customer's yes and runs as code | Exists; extend per business |
 | **5. External systems** (calendars, Twilio, ElevenLabs, model APIs, Pinecone, LangSmith) | Leaked API keys · a spoofed caller number reaching someone's bookings · scammers copying offer messages · malicious files exploiting a parser | Secrets on the server only, one least-privilege credential per service · phone line protected by a shared secret · a caller number alone never changes a booking (D8) · offers never carry links asking for personal details · readers run in a separate process with time and memory limits | Shared secret exists; rest new |
 | **6. Output** | Personal details in replies, logs or traces · over-trust in a made-up answer | Personal details hidden in traces and logs · answers only from the business's documents; "I don't know" plus hand-off rather than a guess · live safety reviewer and review queue | Trace hiding and review queue exist |
+| **Admin console** | An admin page used to read or leak every business's data; a stolen admin login | Admin reads only the registry's health summaries, never a cell · content only through logged, time-limited support access visible to the owner · separate admin role with a second factor · no impersonation | New |
 
 **The three risks that matter most here**
 
@@ -330,11 +357,12 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | M3 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed Pebble Spa | ✅ |
 | M4 | Document intake: upload checks, readers (pdfplumber, python-docx, Claude for images and scans), redaction, sections, Pinecone namespace, re-upload replaces | ✅ |
 | M5 | Services reader: strict schema, normalising, validation, quotes; parser benchmark; per-field and abstention evals | ✅ |
-| M6 | Onboarding screens on the backend: per-document progress, editable services table; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing) | ✅ |
+| M6 | Onboarding screens on the backend: per-document progress, editable services table; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing); **admin console, first version**: list with status, channels, documents and services counts, pause and resume, retry | ✅ |
 | M7 | Widget on the backend: chat through the SmartDesk API; key and domain check | ✅ |
 | M8 | Waitlist and `join_waitlist` | ✅ |
 | M9 | Slot recovery: matching, offers, expiry, `answer_offer` | ✅ |
-| M10 | Second sample business; full eval run; demo script | ✅ |
+| M10 | Admin console, full: activity, errors, reply time and cost per business; support access | |
+| M11 | Second sample business; full eval run; demo script | ✅ |
 
 ## 10. Decisions
 
@@ -352,6 +380,8 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | D14 | Document readers | pdfplumber · PyMuPDF (AGPL) · Docling · LangChain loaders | **Decided: pdfplumber, python-docx, filetype; Claude for images and scanned pages; Docling as benchmark rival** |
 | D16 | Isolation between businesses | 1 shared tables tagged by business · 2 separate stores per business · 3 separate running copy per business · 4 cells | **Decided: cells**: separate stores per business now (level 2), each movable to its own running copy later (level 3) without code changes (`docs/workflows/go-live.md`) |
 | D17 | Phone numbers in v1 | buy one per business at go-live · phone optional · demo reuses the existing number | **Decided: bought at go-live after the owner's yes; phone optional; Pebble Spa attaches its existing number** |
+| D19 | What SmartDesk's admin can see | everything · registry and health summaries only, content through support access | **Decided: health, not content**: the admin console monitors clients from the registry; content only through logged, time-limited support access visible to the owner |
+| D20 | When to build the admin console | with M6 · after M9 · split | **Decided: split**: a first version in M6, activity, cost and support access after M9 |
 | D18 | Calendars in v1 | Google Calendar only · booking-system connectors (Square, Fresha, Vagaro, Mindbody) | **Decided: Google Calendar only**, one calendar per staff member, behind the existing calendar interface (`booking/calendars/base.py`) so a connector is a new file, not a rewrite |
 | D15 | Onboarding v1 scope | Full owner review with an Onboarding agent · documents straight to search with an editable services table | **Decided: documents straight to search; services table shown and editable; no recordings** |
 
