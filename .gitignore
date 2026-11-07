@@ -1,0 +1,15 @@
+# Secrets: never committed (.env.example is the template)
+.env
+
+# Local environment and caches
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Business data created at run time: each business's cell, the registry,
+# hand-offs and feedback. Holds customers' details; never committed.
+storage/
+data/businesses/
+data/registry.db

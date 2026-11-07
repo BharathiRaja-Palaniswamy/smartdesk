@@ -29,6 +29,11 @@ shortcut.
 **Every agent and workflow has a spec** from `docs/templates/` (seven
 sections, secure by default) before any code is written.
 
+**No business in SmartDesk** (D23–D25). The engine, its tests and its docs
+name no real business and hold none of its data: each business's files live
+with that business and reach SmartDesk only through onboarding. Tests use a
+made-up test business.
+
 **Every push is checked** against the deployment anti-patterns in
 `docs/checklists/PRE-PUSH.md`: automatic checks by a pre-push hook, the rest
 answered in the commit message.
@@ -84,7 +89,7 @@ at the end of onboarding (`docs/workflows/go-live.md`).
 
 | Name | Kind | Job | Talks to | Status |
 |---|---|---|---|---|
-| **Front Desk** | agent | Answers customers by chat and phone; books, changes, cancels; joins the waitlist; hands off to staff | Customers | Reuse (Pebby), made per business |
+| **Front Desk** | agent | Answers customers by chat and phone; books, changes, cancels; joins the waitlist; hands off to staff | Customers | Reuse (spaDesk's agent), made per business |
 | **Feedback** | agent | Reads visit feedback, replies, files a card for the owner | Customers, via Front Desk | Reuse |
 | **Owner** | agent | Answers the owner's questions about bookings, revenue, feedback | Owner | Reuse |
 | **Services reader** | AI step in the onboarding workflow | Reads document sections into the services table (strict schema) | nobody | **New** |
@@ -173,7 +178,7 @@ sequenceDiagram
   participant C2 as Customer B (waitlisted)
   C1->>FD: Cancel my 3 pm facial
   FD->>BK: cancel (after A's yes)
-  BK-->>SR: slot opened: facial, Fri 3 pm, therapist X
+  BK-->>SR: slot opened: facial, Fri 3 pm, staff member X
   SR->>SR: eligible = opted in, wants this service and time,<br/>no clash, not already offered; fair order
   SR->>C2: Offer: Fri 3 pm facial. Reply yes within N min
   C2->>FD: Yes
@@ -229,14 +234,14 @@ services table and free times from the calendar (exact data).
 
 ### Reset (for testing with the same business)
 
-Pebble Spa is onboarded again and again while building, so resetting is
+The test business is onboarded again and again while building, so resetting is
 built in, and limited, since it is the most dangerous action in the system.
 
 | Action | Clears | Keeps |
 |---|---|---|
 | **Reset onboarding** | the cell's documents, sections, Pinecone namespace, services table | business basics, widget key, phone setup |
 | **Delete business** | the whole cell and its registry rows | every other cell |
-| **Seed Pebble Spa** (development only) | — | recreates the test business in a known state |
+| **Seed a test business** (development only) | — | creates a business from a folder of its files (document, bookings, golden set) in a known state |
 
 Rules:
 
@@ -334,7 +339,7 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | What | How it is checked | Bar |
 |---|---|---|
 | Parser benchmark | pdfplumber vs Docling on 3–5 spa and salon documents, scored on services-table fields | keep the better reader |
-| Services table | Hand-labelled table for `business_doc.md` and test documents: precision and recall **per field** (name, duration, price, staff) | high per field; **zero invented values** |
+| Services table | Hand-labelled tables for test documents: precision and recall **per field** (name, duration, price, staff) | high per field; **zero invented values** |
 | Abstention | Documents with a service but no price or duration | field left empty every time |
 | Front desk | Existing golden set, run per business | same bars as today |
 | Slot recovery | Unit tests: eligibility, order, expiry, double-booking | all pass |
@@ -345,7 +350,7 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | Live | Traces tagged with the business id; same review rules as today; unanswered questions reviewed | — |
 
 **Graph RAG** is tried only if the front-desk evals show linked questions failing
-("which therapist does X on Tuesday, and which package includes it?").
+("which staff member does X on Tuesday, and which package includes it?").
 
 ## 9. Build order (one module at a time, review after each)
 
@@ -353,8 +358,8 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 |---|---|---|
 | M0 | Copy the engine in: one path (hand-built RAG and the older chats dropped), generic names, fixes F1–F5 with tests, live debug events, pre-push hook; all tests pass (`docs/modules/M0.md`) | ✅ |
 | M1 | **Cells**: registry and **SQLite** (each business's database created per cell from the start; hand-offs and feedback move from files into it), cell creation at sign-up (database, folder, namespace, trace project), resolver that opens only the resolved cell, memory and caches keyed per business, widget keys tied to domains, rate limits; cross-business tests in the pre-push hook | ✅ |
-| M2 | Pebble Spa as business 1; existing evals still pass (parity) | ✅ |
-| M3 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed Pebble Spa | ✅ |
+| M2 | spaDesk's business onboarded as business 1 from its own files; its evals still pass (parity), its golden set updated to the new names (target `frontdesk`, `staff_member`) | ✅ |
+| M3 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed a test business | ✅ |
 | M4 | Document intake: upload checks, readers (pdfplumber, python-docx, Claude for images and scans), redaction, sections, Pinecone namespace, re-upload replaces | ✅ |
 | M5 | Services reader: strict schema, normalising, validation, quotes; parser benchmark; per-field and abstention evals | ✅ |
 | M6 | Onboarding screens on the backend: per-document progress, editable services table; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing); **admin console, first version**: list with status, channels, documents and services counts, pause and resume, retry | ✅ |
@@ -379,9 +384,13 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | D13 | Document limits | — | **Decided: 50 MB and 500 pages per document, 10 MB per image, 30 files per upload; chunked upload** |
 | D14 | Document readers | pdfplumber · PyMuPDF (AGPL) · Docling · LangChain loaders | **Decided: pdfplumber, python-docx, filetype; Claude for images and scanned pages; Docling as benchmark rival** |
 | D16 | Isolation between businesses | 1 shared tables tagged by business · 2 separate stores per business · 3 separate running copy per business · 4 cells | **Decided: cells**: separate stores per business now (level 2), each movable to its own running copy later (level 3) without code changes (`docs/workflows/go-live.md`) |
-| D17 | Phone numbers in v1 | buy one per business at go-live · phone optional · demo reuses the existing number | **Decided: bought at go-live after the owner's yes; phone optional; Pebble Spa attaches its existing number** |
+| D17 | Phone numbers in v1 | buy one per business at go-live · phone optional · demo reuses the existing number | **Decided: bought at go-live after the owner's yes; phone optional; the first business attaches its existing number** |
 | D19 | What SmartDesk's admin can see | everything · registry and health summaries only, content through support access | **Decided: health, not content**: the admin console monitors clients from the registry; content only through logged, time-limited support access visible to the owner |
 | D20 | When to build the admin console | with M6 · after M9 · split | **Decided: split**: a first version in M6, activity, cost and support access after M9 |
+| D21 | How search is tested | fake embeddings in tests, quality in the retrieval eval · local models through LangChain's FastEmbed · keep the hand-built local models for tests | **Decided: fake embeddings in tests** (`DeterministicFakeEmbedding`); search quality measured by the retrieval eval against Pinecone |
+| D23 | Where a business's data lives | in SmartDesk's repo · with the business only | **Decided: with the business only.** SmartDesk holds no business's name, document, bookings or eval set; spaDesk's business keeps its files in spaDesk's repo and reaches SmartDesk only by onboarding |
+| D24 | Domain words | spa words (therapist, spa) · generic words | **Decided: generic**: staff member, business; examples in code use the test business's neutral names |
+| D25 | What tests run against | the first business's data · a made-up test business | **Decided: a made-up test business** (`tests/fixtures/`): document, bookings and a small golden set, with neutral names |
 | D18 | Calendars in v1 | Google Calendar only · booking-system connectors (Square, Fresha, Vagaro, Mindbody) | **Decided: Google Calendar only**, one calendar per staff member, behind the existing calendar interface (`booking/calendars/base.py`) so a connector is a new file, not a rewrite |
 | D15 | Onboarding v1 scope | Full owner review with an Onboarding agent · documents straight to search with an editable services table | **Decided: documents straight to search; services table shown and editable; no recordings** |
 

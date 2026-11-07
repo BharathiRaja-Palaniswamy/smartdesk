@@ -1,0 +1,53 @@
+/* Design tokens: every colour, font and size the manage page uses, as
+   variables. The other stylesheets only refer to these names, so the whole
+   look is set here.
+
+   The look matches the customer site (static/home/css/tokens.css): off-white
+   page, deep navy ink, a magenta accent and the pastel wave. Keep the two in
+   step. */
+
+:root {
+  color-scheme: light;
+  --page: #fcfafa;            /* off-white, behind the cards */
+  --surface: #ffffff;         /* cards, inputs */
+  --tint: #f6f1f8;            /* pale lilac: selected and hovered controls */
+  --text-primary: #191e49;    /* deep navy ink */
+  --text-secondary: #474f7b;  /* softer navy */
+  --text-muted: #676d91;
+  --hairline: #ece9f2;        /* gridlines, dividers */
+  --axis: #cfcbe0;            /* chart baseline, hover line */
+  --border: #e7e3ee;
+  --accent: #bc269b;          /* magenta: buttons, selected controls */
+  --accent-soft: #474f7b;     /* softer navy: small labels */
+  --accent-wash: var(--tint);
+  --on-accent: #ffffff;       /* text on a magenta button */
+  /* The pastel wave: lavender, purple, pink, peach. */
+  --wave: linear-gradient(90deg, #a0a9fc, #c098f5, #faa4cd, #ffc9a3);
+
+  /* Chart colours, used in this fixed order. The order is what keeps
+     neighbouring colours tellable apart for colour-blind readers (magenta
+     and teal look alike to some, so they are never neighbours): add to the
+     end and do not reorder. Checked: every neighbouring pair is at least 8.8
+     apart (OKLab x100) under simulated colour blindness and 15.8 apart for
+     normal vision, and every colour has at least 3:1 contrast on white. */
+  --series-1: #c0359f;        /* magenta: also the colour of single-series charts */
+  --series-2: #6b5fd3;        /* iris */
+  --series-3: #d9734e;        /* peach, deepened */
+  --series-4: #2f8fa8;        /* teal blue */
+  --series-5: #4b5799;        /* slate */
+  /* Customer sentiment: teal = happy, grey = neutral, rose = unhappy. Teal
+     rather than green, because green and red look alike to the most common
+     kind of colour blindness. */
+  --sentiment-happy: #1f8f8a;
+  --sentiment-neutral: #a3a1b8;
+  --sentiment-unhappy: #d6455f;
+  --good-text: #13706b;       /* a change in the right direction */
+  --bad-text: #b4233f;        /* a change in the wrong direction */
+
+  --font: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;  /* small uppercase labels */
+  --radius: 20px;             /* cards and panels */
+  --radius-small: 12px;       /* inputs and small boxes */
+  --shadow: 0 24px 60px -32px rgba(25, 30, 73, 0.35);
+  --gap: 16px;
+}

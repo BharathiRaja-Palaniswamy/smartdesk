@@ -7,9 +7,9 @@
 
 window.SmartDeskBrain = (() => {
   const BUSINESSES = {
-    pub_demo_pebble: {
-      name: "Pebble Spa",
-      greeting: "Hi! I'm Pebble Spa's assistant. I can answer questions and help you book. What can I do for you?",
+    pub_demo_sample: {
+      name: "Sample Business",
+      greeting: "Hi! I'm Sample Business's assistant. I can answer questions and help you book. What can I do for you?",
       suggestions: ["What are your prices?", "Book a massage", "Opening hours"],
     },
   };

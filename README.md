@@ -60,8 +60,8 @@ Open slots go unfilled.
 
 ## Where it starts
 
-SmartDesk grows out of a working AI front desk built for one fictional spa
-(Pebble Spa): [spaDesk](https://github.com/bharathiraja-palaniswamy/spaDesk) ·
+SmartDesk grows out of a working AI front desk built for one fictional business:
+[spaDesk](https://github.com/bharathiraja-palaniswamy/spaDesk) ·
 [live overview](https://bharathiraja-palaniswamy.github.io/spaDesk/) ·
 [evaluation write-up](https://bharathiraja-palaniswamy.github.io/spaDesk/week-4.html).
 
@@ -94,7 +94,7 @@ SmartDesk grows out of a working AI front desk built for one fictional spa
 
 The front end is a static preview (sample data, no backend yet):
 `web/index.html` (landing page), `web/onboard.html` (onboarding),
-`web/demo/pebble-spa.html` (the chat widget on a business's site).
+`web/demo/sample-business.html` (the chat widget on a business's site).
 
 ---
 

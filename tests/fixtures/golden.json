@@ -1,0 +1,125 @@
+{
+  "name": "Test business golden set",
+  "version": 1,
+  "about": "A few eval cases for the made-up test business (tests/fixtures/business.md), one per target, so the eval code is tested without any real business's data.",
+  "cases": [
+    {
+      "id": "H01-opening-hours",
+      "target": "frontdesk",
+      "split": "happy",
+      "category": "question",
+      "why": "A plain question is answered from the guide, not by booking.",
+      "channel": "chat",
+      "turns": [
+        "Asha Rao, 408 555 0101",
+        "What time do you open on Sunday?"
+      ],
+      "expected": {
+        "routing": {
+          "tool": "search_guide",
+          "not_tools": [
+            "booking"
+          ]
+        },
+        "outcome": {
+          "confirming": false
+        },
+        "answer": {
+          "cites": [
+            "Location and Hours"
+          ],
+          "mentions": [
+            "10"
+          ]
+        }
+      }
+    },
+    {
+      "id": "H16-my-bookings",
+      "target": "frontdesk",
+      "split": "happy",
+      "category": "booking",
+      "why": "Their own bookings are listed.",
+      "channel": "chat",
+      "seed": [
+        {
+          "service": "Prenatal Massage",
+          "staff_member": "Dev Patel",
+          "weekday": "Friday",
+          "time": "15:00"
+        }
+      ],
+      "turns": [
+        "Asha Rao, 408 555 0101",
+        "No, something else: what bookings do I have?"
+      ],
+      "expected": {
+        "routing": {
+          "tool": "booking",
+          "intent": [
+            "my_bookings"
+          ]
+        },
+        "outcome": {
+          "confirming": false,
+          "made": 0,
+          "removed": 0
+        },
+        "answer": {
+          "mentions": [
+            "Prenatal Massage"
+          ]
+        }
+      }
+    },
+    {
+      "id": "QA-pregnancy-body-wrap",
+      "target": "rag_qa",
+      "split": "happy",
+      "category": "question",
+      "why": "Answered from the guide, with its facts stated exactly.",
+      "turns": [
+        "Can I have the Mineral Body Wrap while pregnant?"
+      ],
+      "expected": {
+        "answer": {
+          "covered": true,
+          "cites": [
+            "Pregnancy",
+            "Heat-Based Treatments"
+          ],
+          "judge": [
+            "Says the Mineral Body Wrap is not suitable during pregnancy."
+          ]
+        }
+      }
+    },
+    {
+      "id": "OW-revenue-september",
+      "target": "owner_chat",
+      "split": "happy",
+      "category": "report",
+      "why": "A figure comes from the bookings report, never from memory.",
+      "turns": [
+        "What was our revenue in September 2026?"
+      ],
+      "expected": {
+        "routing": {
+          "tool": "get_report"
+        },
+        "answer": {
+          "covered": true,
+          "mentions_report": [
+            {
+              "start": "2026-09-01",
+              "end": "2026-09-30",
+              "figures": [
+                "revenue"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

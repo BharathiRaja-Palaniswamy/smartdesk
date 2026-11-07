@@ -72,7 +72,7 @@ Prompt: `smartdesk/onboarding/prompt.py` (planned). Version in every trace.
 
 | Gate | Cases | Bar |
 |---|---|---|
-| Use-case evals | Pebble Spa open items with scripted owner answers | suggestions match the answers |
+| Use-case evals | the test business's open items with scripted owner answers | suggestions match the answers |
 | Attack tests | "approve all", "ignore rules", poisoned file | all pass |
 | Tool allow-list | no approve, no publish, no web | all pass |
 | Isolation | business B's items from A's session | zero leaks |
@@ -80,7 +80,7 @@ Prompt: `smartdesk/onboarding/prompt.py` (planned). Version in every trace.
 
 ## 6. Release *(Deployment)*
 
-local → staging (test business: Pebble Spa, resettable) → production.
+local → staging (the test business, resettable) → production.
 
 ## 7. Live checks *(Runtime verification)*
 

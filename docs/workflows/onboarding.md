@@ -133,7 +133,7 @@ Document text is data, never instructions, in every prompt.
 |---|---|---|
 | Steps on their own | each step with small fixtures | all pass |
 | Parser benchmark | pdfplumber vs Docling on 3–5 documents | better one chosen, scores recorded |
-| Services table | `business_doc.md` and test documents, hand-labelled | precision and recall per field; **zero invented** |
+| Services table | test documents, hand-labelled | precision and recall per field; **zero invented** |
 | Abstention | services without price or duration | empty every time |
 | Re-upload | same document twice, changed price | only the new price searchable and bookable |
 | Large input | 300-page PDF | completes; timing recorded |
@@ -142,7 +142,7 @@ Document text is data, never instructions, in every prompt.
 
 ## 6. Release *(Deployment)*
 
-local → staging (Pebble Spa, resettable) → production; only versions whose gates passed.
+local → staging (the test business, resettable) → production; only versions whose gates passed.
 
 ## 7. Live checks *(Runtime verification)*
 
