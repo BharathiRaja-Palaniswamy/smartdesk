@@ -8,7 +8,7 @@ done · not touched by this change · not built yet.
 
 | # | Anti-pattern | In SmartDesk, the push must keep… | Check |
 |---|---|---|---|
-| 1 | **No rate limits** | limits per business and per customer on chat, phone, uploads and owner routes | review; auto once M1 adds limit tests |
+| 1 | **No rate limits** | limits per business and per customer on chat, phone, uploads and owner routes | review; auto once M2 adds limit tests |
 | 2 | **No input / output validation** | uploads checked by real type, size and pages; tool arguments and AI output checked against schemas (Pydantic, strict); services-table values backed by an exact quote; replies set as text, never HTML | auto: tests · review |
 | 3 | **No monitoring or logging** | every agent, tool and workflow step traced (LangSmith) and emitting debug events; personal details hidden in both; live review rules unchanged | review |
 | 4 | **Secrets in code or prompts** | no keys, tokens or passwords in the repo, prompts, logs or traces; `.env` never committed; secrets only from the environment | auto: secret scan of the diff · review |

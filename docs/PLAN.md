@@ -256,6 +256,10 @@ Rules:
 
 ### Admin console (SmartDesk monitoring its clients)
 
+Full spec: `docs/features/admin-console.md`. Each business's row links to the
+**simulator** (`docs/features/simulator.md`): a chat with that business's real
+agent in a sandbox, with the live debug panel.
+
 For SmartDesk's own team, not business owners. It shows every business's
 **health**, never its **content** (D19).
 
@@ -282,7 +286,7 @@ For SmartDesk's own team, not business owners. It shows every business's
 
 ## 7. Security
 
-Security is designed in from M1, not added later: SmartDesk holds other
+Security is designed in from M2, not added later: SmartDesk holds other
 businesses' data and their customers' personal details. Each layer of the app
 below, with how it could be attacked here and the defence.
 
@@ -357,17 +361,18 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | # | Module | Demo-critical |
 |---|---|---|
 | M0 | Copy the engine in: one path (hand-built RAG and the older chats dropped), generic names, fixes F1–F5 with tests, live debug events, pre-push hook; all tests pass (`docs/modules/M0.md`) | ✅ |
-| M1 | **Cells**: registry and **SQLite** (each business's database created per cell from the start; hand-offs and feedback move from files into it), cell creation at sign-up (database, folder, namespace, trace project), resolver that opens only the resolved cell, memory and caches keyed per business, widget keys tied to domains, rate limits; cross-business tests in the pre-push hook | ✅ |
-| M2 | spaDesk's business onboarded as business 1 from its own files; its evals still pass (parity), its golden set updated to the new names (target `frontdesk`, `staff_member`) | ✅ |
-| M3 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed a test business | ✅ |
-| M4 | Document intake: upload checks, readers (pdfplumber, python-docx, Claude for images and scans), redaction, sections, Pinecone namespace, re-upload replaces | ✅ |
-| M5 | Services reader: strict schema, normalising, validation, quotes; parser benchmark; per-field and abstention evals | ✅ |
-| M6 | Onboarding screens on the backend: per-document progress, editable services table; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing); **admin console, first version**: list with status, channels, documents and services counts, pause and resume, retry | ✅ |
-| M7 | Widget on the backend: chat through the SmartDesk API; key and domain check | ✅ |
-| M8 | Waitlist and `join_waitlist` | ✅ |
-| M9 | Slot recovery: matching, offers, expiry, `answer_offer` | ✅ |
-| M10 | Admin console, full: activity, errors, reply time and cost per business; support access | |
-| M11 | Second sample business; full eval run; demo script | ✅ |
+| M1 | **Admin console preview and simulator v0**: the console's layout with sample businesses (`docs/features/admin-console.md`); the simulator for the one configured business: real agent, sandbox calendar, session-only hand-offs, settable clock, debug panel (`docs/features/simulator.md`) | ✅ |
+| M2 | **Cells**: registry and **SQLite** (each business's database created per cell from the start; hand-offs and feedback move from files into it), cell creation at sign-up (database, folder, namespace, trace project), resolver that opens only the resolved cell, memory and caches keyed per business, widget keys tied to domains, rate limits; cross-business tests in the pre-push hook | ✅ |
+| M3 | spaDesk's business onboarded as business 1 from its own files; its evals still pass (parity), its golden set updated to the new names (target `frontdesk`, `staff_member`) | ✅ |
+| M4 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed a test business | ✅ |
+| M5 | Document intake: upload checks, readers (pdfplumber, python-docx, Claude for images and scans), redaction, sections, Pinecone namespace, re-upload replaces | ✅ |
+| M6 | Services reader: strict schema, normalising, validation, quotes; parser benchmark; per-field and abstention evals | ✅ |
+| M7 | Onboarding screens on the backend: per-document progress, editable services table; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing); **admin console, first version**: list with status, channels, documents and services counts, pause and resume, retry | ✅ |
+| M8 | Widget on the backend: chat through the SmartDesk API; key and domain check | ✅ |
+| M9 | Waitlist and `join_waitlist` | ✅ |
+| M10 | Slot recovery: matching, offers, expiry, `answer_offer` | ✅ |
+| M11 | Admin console, full: activity, errors, reply time and cost per business; support access | |
+| M12 | Second sample business; full eval run; demo script | ✅ |
 
 ## 10. Decisions
 
@@ -386,11 +391,14 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | D16 | Isolation between businesses | 1 shared tables tagged by business · 2 separate stores per business · 3 separate running copy per business · 4 cells | **Decided: cells**: separate stores per business now (level 2), each movable to its own running copy later (level 3) without code changes (`docs/workflows/go-live.md`) |
 | D17 | Phone numbers in v1 | buy one per business at go-live · phone optional · demo reuses the existing number | **Decided: bought at go-live after the owner's yes; phone optional; the first business attaches its existing number** |
 | D19 | What SmartDesk's admin can see | everything · registry and health summaries only, content through support access | **Decided: health, not content**: the admin console monitors clients from the registry; content only through logged, time-limited support access visible to the owner |
-| D20 | When to build the admin console | with M6 · after M9 · split | **Decided: split**: a first version in M6, activity, cost and support access after M9 |
+| D20 | When to build the admin console | with M7 · after M10 · split | **Decided: split**: a first version in M7, activity, cost and support access after M10 |
 | D21 | How search is tested | fake embeddings in tests, quality in the retrieval eval · local models through LangChain's FastEmbed · keep the hand-built local models for tests | **Decided: fake embeddings in tests** (`DeterministicFakeEmbedding`); search quality measured by the retrieval eval against Pinecone |
 | D23 | Where a business's data lives | in SmartDesk's repo · with the business only | **Decided: with the business only.** SmartDesk holds no business's name, document, bookings or eval set; spaDesk's business keeps its files in spaDesk's repo and reaches SmartDesk only by onboarding |
 | D24 | Domain words | spa words (therapist, spa) · generic words | **Decided: generic**: staff member, business; examples in code use the test business's neutral names |
 | D25 | What tests run against | the first business's data · a made-up test business | **Decided: a made-up test business** (`tests/fixtures/`): document, bookings and a small golden set, with neutral names |
+| D26 | Simulator safety | the real tools · a sandbox | **Decided: sandbox**: sandbox calendar, session-only hand-offs and cards, test customers only, settable clock, traces tagged `simulator`, a cost limit per session |
+| D27 | Admin use of the simulator | free · support access | **Decided: support access**: a reason, time-limited, logged, shown to the owner |
+| D28 | Order of the console and simulator | after cells · previews first | **Decided: previews first**: M0, then the console preview and simulator v0 (M1), then cells (M2) make both real |
 | D18 | Calendars in v1 | Google Calendar only · booking-system connectors (Square, Fresha, Vagaro, Mindbody) | **Decided: Google Calendar only**, one calendar per staff member, behind the existing calendar interface (`booking/calendars/base.py`) so a connector is a new file, not a rewrite |
 | D15 | Onboarding v1 scope | Full owner review with an Onboarding agent · documents straight to search with an editable services table | **Decided: documents straight to search; services table shown and editable; no recordings** |
 

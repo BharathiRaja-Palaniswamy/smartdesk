@@ -97,7 +97,7 @@ flowchart LR
 
 Steps 2–8 run in the background per document; the owner can leave and come
 back. Each document shows its own progress. Rough expectations, to be
-replaced by measurements in M4–M5: a few seconds for a short document;
+replaced by measurements in M5–M6: a few seconds for a short document;
 minutes for a 300-page PDF (the services reader runs on sections in parallel).
 
 ## 3. AI inside steps *(System prompt + paved roads)*
