@@ -351,8 +351,8 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 
 | # | Module | Demo-critical |
 |---|---|---|
-| M0 | Repo skeleton; copy the engine in with the known fixes; SQLite; live debug events; tests pass | ✅ |
-| M1 | **Cells**: registry, cell creation at sign-up (database, folder, namespace, trace project), resolver that opens only the resolved cell, memory and caches keyed per business, widget keys tied to domains, rate limits; cross-business tests in the pre-push hook | ✅ |
+| M0 | Copy the engine in: one path (hand-built RAG and the older chats dropped), generic names, fixes F1–F5 with tests, live debug events, pre-push hook; all tests pass (`docs/modules/M0.md`) | ✅ |
+| M1 | **Cells**: registry and **SQLite** (each business's database created per cell from the start; hand-offs and feedback move from files into it), cell creation at sign-up (database, folder, namespace, trace project), resolver that opens only the resolved cell, memory and caches keyed per business, widget keys tied to domains, rate limits; cross-business tests in the pre-push hook | ✅ |
 | M2 | Pebble Spa as business 1; existing evals still pass (parity) | ✅ |
 | M3 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed Pebble Spa | ✅ |
 | M4 | Document intake: upload checks, readers (pdfplumber, python-docx, Claude for images and scans), redaction, sections, Pinecone namespace, re-upload replaces | ✅ |
