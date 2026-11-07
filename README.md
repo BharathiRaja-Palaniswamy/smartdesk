@@ -54,7 +54,7 @@ Open slots go unfilled.
 | Services table, checked and editable by the owner | Owner review of gaps and conflicts before going live |
 | Website chat assistant | Campaign management |
 | Phone support | More customer engagement workflows |
-| Full booking: availability, book, reschedule, cancel | |
+| Full booking: availability, book, reschedule, cancel, on Google Calendar | Connecting to existing booking systems (Square and others) |
 | Hand-off to staff | |
 | Filling cancelled slots from the waitlist | |
 

@@ -144,6 +144,29 @@
       <li>Update a document any time: upload it again and it replaces the old version</li>
     </ul>
     <a class="btn" href="index.html">Back to home</a>
+
+    <!-- Development only: empty or remove this business's cell
+         (docs/workflows/go-live.md, parts C and D) -->
+    <div class="danger" id="danger">
+      <p class="label">Development only</p>
+      <h3>Reset</h3>
+      <p class="muted">Reset onboarding empties your documents, search and services table, and keeps your basics, widget and phone. Delete business removes everything for this business. Neither can be undone.</p>
+      <div class="danger-actions">
+        <button class="btn ghost danger-btn" type="button" data-reset="onboarding">Reset onboarding</button>
+        <button class="btn ghost danger-btn" type="button" data-reset="business">Delete business</button>
+      </div>
+      <div id="reset-confirm" hidden>
+        <label class="field" for="reset-name">
+          <span id="reset-prompt"></span>
+          <input type="text" id="reset-name" autocomplete="off">
+        </label>
+        <div class="danger-actions">
+          <button class="btn ghost" type="button" id="reset-cancel">Cancel</button>
+          <button class="btn danger-go" type="button" id="reset-go" disabled></button>
+        </div>
+      </div>
+      <ul class="progress" id="reset-progress" hidden></ul>
+    </div>
   </section>
 
 </main>
@@ -153,5 +176,6 @@
 <script src="js/upload.js"></script>
 <script src="js/services.js"></script>
 <script src="js/complete.js"></script>
+<script src="js/reset.js"></script>
 </body>
 </html>

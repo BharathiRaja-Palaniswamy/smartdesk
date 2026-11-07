@@ -9,8 +9,8 @@ From `docs/templates/WORKFLOW.md`. Status: **draft for review**.
 | **Job, in one sentence** | Turns a business's basics and documents into searchable sections and a services table its assistant can book from. |
 | **Triggered by** | The owner submitting basics, then each document finishing its upload (documents are processed independently) |
 | **Input** | Business basics (form); documents with the owner's authorization |
-| **Output** | Sections in this business's Pinecone namespace; services table in SQLite; widget code |
-| **Done when** | Every document is processed and the done page is shown |
+| **Output** | Sections in the business's Pinecone namespace; services table in the business's database; a live cell with widget code |
+| **Done when** | Go-live succeeds (`docs/workflows/go-live.md`, part B) |
 | **Out of scope (v1)** | Call recordings; a scan for odd values, gaps and conflicts; an Onboarding agent; phone-line setup (see the plan's roadmap) |
 
 ### Documents accepted
@@ -43,36 +43,41 @@ file can crash only its own job, never the server.
 
 ### Where data lives
 
+Everything below is inside the business's own **cell** (D16), created in
+step 1; nothing from onboarding is stored in shared space.
+
 | What | Where |
 |---|---|
-| Business basics | SQLite `businesses` |
-| Original documents | disk: `files/<business>/originals/<document-id>` |
-| Document records | SQLite `documents` (name, fingerprint, authorized by, status) |
-| Sections (redacted text, document, page) | SQLite `sections`; embedded into Pinecone, namespace = business id, each entry tagged with its document id |
-| Services table | SQLite `services` (service, options with duration and price, staff, quote per value, edited by owner) |
+| Business basics | cell database `business.db`, table `business` |
+| Original documents | `data/businesses/<id>/files/<document-id>` |
+| Document records | cell database, `documents` (name, fingerprint, authorized by, status) |
+| Sections (redacted text, document, page) | cell database, `sections`; embedded into Pinecone namespace `<id>`, each entry tagged with its document id |
+| Services table | cell database, `services` (service, options with duration and price, staff, quote per value, edited by owner) |
 
 ## 2. Steps
 
 | # | Step | Code or AI | Input → output | On failure | Safe to re-run? |
 |---|---|---|---|---|---|
-| 1 | Basics | code | form → `businesses` row | form shows the error | yes |
+| 1 | Basics and cell | code | form → the business's cell, status *draft* (go-live part A) | form shows the error; nothing half-created | yes |
 | 2 | Intake and checks | code | chunks → original on disk + `documents` row; real type, size, pages, duplicate fingerprint | reject the file with the reason | yes |
 | 3 | Replace | code | same document name uploaded before → its old sections, index entries and services removed | stop; nothing half-replaced | yes |
 | 4 | Extract text | code; Claude for images and scanned pages | document → text per page, tables kept | flag the file as unreadable | yes |
 | 5 | Redact | code + small AI | text → personal details replaced | stop: nothing unredacted is stored | yes |
 | 6 | Sections | code | text → sections by heading, each with document and page | one section per page | yes |
 | 7 | Index | code | sections → embeddings in this business's namespace | retry; earlier sections stay searchable | yes |
-| 8 | Services table | **AI** + code | sections → services (strict schema) → normalised and validated by code | section skipped and listed on the done page | yes |
-| 9 | Done page | code | services table (editable) + widget code | — | — |
+| 8 | Services table | **AI** + code | sections → services (strict schema) → normalised and validated by code | section skipped and listed on the services page | yes |
+| 9 | Services page | code | services table, editable by the owner | — | — |
+| 10 | Go live | code | widget key, phone line (owner's yes), calendar → cell *live* (go-live part B) | all undone; cell stays *draft* with the reason | yes |
 
 ```mermaid
 flowchart LR
-  A[1 Basics] --> B[2 Intake + checks] --> C[3 Replace old version]
+  A[1 Basics + cell] --> B[2 Intake + checks] --> C[3 Replace old version]
   C --> D[4 Extract text] --> E[5 Redact] --> F[6 Sections]
   F --> G[7 Index: Pinecone]
   F --> H[8 Services table: AI + code]
-  G --> I[9 Done page]
+  G --> I[9 Services page]
   H --> I
+  I --> J[10 Go live]
 ```
 
 ### Services table rules (code, after the AI)
@@ -85,7 +90,7 @@ flowchart LR
   or the value is dropped; durations and prices must be positive and sensible.
 - **Abstain**: a value the document does not state stays empty. A service
   without a price is shown as "price missing" and is not bookable.
-- **Owner edits** on the done page are saved with "edited by owner" and are
+- **Owner edits** on the services page are saved with "edited by owner" and are
   kept until that document is uploaded again.
 
 ### Timing and progress

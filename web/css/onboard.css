@@ -93,3 +93,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .services th:nth-child(4), .services td:nth-child(4) { display: none; }
   .services td:nth-child(2), .services td:nth-child(3) { width: 84px; }
 }
+
+/* Reset (development only): set apart, in the warning colours */
+.danger { margin-top: 48px; padding: 20px; border: 1px dashed #e7b9b5; border-radius: var(--radius); background: #fff; }
+.danger .label { color: #a3302a; }
+.danger h3 { margin: 4px 0 6px; }
+.danger .field { margin-top: 14px; }
+.danger-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.danger-btn { border-color: #a3302a; color: #a3302a; }
+.danger-btn:hover { background: #fbeceb; }
+.danger-go { background: #a3302a; border-color: #a3302a; }
+.danger-go:hover { background: #82241f; }
+.danger .progress { margin-top: 16px; }
