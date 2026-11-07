@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set up SmartDesk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/onboard.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="index.html">SmartDesk</a>
+    <span class="muted">Business setup</span>
+  </div>
+</header>
+
+<main class="onboard">
+
+  <p class="preview-note">Preview: nothing you enter or upload leaves this browser yet, and the services table shows example rows until document reading is connected.</p>
+
+  <ol class="stepper" aria-label="Setup steps">
+    <li data-for="business">1. Your business</li>
+    <li data-for="upload">2. Documents</li>
+    <li data-for="services">3. Services</li>
+    <li data-for="complete">4. Done</li>
+  </ol>
+
+  <!-- Step 1: tell us about your business -->
+  <section class="step" id="business">
+    <h1>Tell us about your business</h1>
+    <p class="muted">The basics first. You'll add documents next.</p>
+    <form id="business-form" novalidate>
+      <div class="field">
+        <label for="name">Business name</label>
+        <input type="text" id="name" name="name" autocomplete="organization" required>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="kind">Type of business</label>
+          <select id="kind" name="kind" required>
+            <option value="">Choose one</option>
+            <option>Spa</option>
+            <option>Salon</option>
+            <option>Barber</option>
+            <option>Nail studio</option>
+            <option>Clinic</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" autocomplete="address-level2">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="website">Website</label>
+          <input type="url" id="website" name="website" placeholder="https://" autocomplete="url">
+          <span class="hint">The chat assistant will only work on this site.</span>
+        </div>
+        <div class="field">
+          <label for="phone">Business phone</label>
+          <input type="tel" id="phone" name="phone" autocomplete="tel">
+        </div>
+      </div>
+      <div class="field">
+        <label for="hours">Opening hours</label>
+        <input type="text" id="hours" name="hours" placeholder="e.g. Mon–Fri 9–7, Sat 10–5, Sun closed" required>
+      </div>
+      <div class="field">
+        <label for="about">What should customers know about you?</label>
+        <textarea id="about" name="about" placeholder="What you offer, who you serve, what makes you different"></textarea>
+      </div>
+      <p class="error" id="business-error" role="alert"></p>
+      <div class="actions">
+        <a class="btn ghost" href="index.html">Cancel</a>
+        <button class="btn" type="submit">Continue</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Step 2: upload documents -->
+  <section class="step" id="upload">
+    <h1>Add your documents</h1>
+    <p class="muted">Price lists, service menus, policies and FAQs. Your assistant answers from these, and books from the services table SmartDesk builds from them.</p>
+    <label class="drop" id="drop" for="file-input">
+      <strong>Drop files here or click to choose</strong>
+      <span class="muted">PDF, Word, text, CSV up to 50 MB · photos (JPG, PNG) up to 10 MB</span>
+      <input type="file" id="file-input" multiple hidden
+             accept=".pdf,.docx,.txt,.md,.csv,.jpg,.jpeg,.png">
+    </label>
+    <ul class="files" id="files"></ul>
+    <label class="consent">
+      <input type="checkbox" id="authorized">
+      <span>I'm authorized to share these files. Personal details in them are hidden before anything is stored.</span>
+    </label>
+    <p class="error" id="upload-error" role="alert"></p>
+    <div class="actions">
+      <button class="btn ghost" type="button" data-back>Back</button>
+      <button class="btn" type="button" id="upload-next">Read my documents</button>
+    </div>
+  </section>
+
+  <!-- Step 3: each document's progress, then the services table to check -->
+  <section class="step" id="services">
+    <h1>Your services</h1>
+    <p class="muted">SmartDesk is reading your documents. Your assistant answers questions from them, and books from this table: check the prices and durations, and fix anything wrong.</p>
+    <ul class="progress" id="progress"></ul>
+    <div id="services-ready" hidden>
+      <table class="services">
+        <thead>
+          <tr><th>Service</th><th>Duration (min)</th><th>Price ($)</th><th>From</th><th><span class="visually-hidden">Remove</span></th></tr>
+        </thead>
+        <tbody id="services-rows"></tbody>
+      </table>
+      <button class="link" type="button" id="add-service">+ Add a service</button>
+      <p class="hint">A service without a price can't be booked until you add one.</p>
+      <p class="error" id="services-error" role="alert"></p>
+      <div class="actions">
+        <button class="btn ghost" type="button" data-back>Back</button>
+        <button class="btn" type="button" id="services-next">Save and finish</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 4: onboarding complete -->
+  <section class="step" id="complete">
+    <p class="done-mark" aria-hidden="true">✓</p>
+    <h1 id="done-title">You're set up</h1>
+    <p class="muted">Your assistant answers from your documents and books from your services table. Add it to your website to go live.</p>
+    <h3>Add the chat to your website</h3>
+    <p class="muted">Paste this just before <code>&lt;/body&gt;</code> on your site.</p>
+    <pre class="snippet" id="snippet"></pre>
+    <button class="btn ghost" type="button" id="copy">Copy snippet</button>
+    <h3 style="margin-top:28px">Next</h3>
+    <ul class="next muted">
+      <li>Connect your phone line so calls are answered too</li>
+      <li>Connect your booking calendar</li>
+      <li>Update a document any time: upload it again and it replaces the old version</li>
+    </ul>
+    <a class="btn" href="index.html">Back to home</a>
+  </section>
+
+</main>
+
+<script src="js/onboard.js"></script>
+<script src="js/business.js"></script>
+<script src="js/upload.js"></script>
+<script src="js/services.js"></script>
+<script src="js/complete.js"></script>
+</body>
+</html>

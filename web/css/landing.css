@@ -1,0 +1,50 @@
+/* The landing page's sections, top to bottom. */
+
+section { padding: 72px 0; }
+section + section { border-top: 1px solid var(--line); }
+section h2 { font-size: 34px; margin: 10px 0 16px; }
+
+/* Hero */
+.hero { text-align: center; padding: 88px 0 72px; }
+.hero h1 { font-size: 56px; margin: 18px auto 18px; max-width: 820px; }
+.hero h1 em { color: var(--accent); }
+.hero p { font-size: 20px; color: var(--muted); max-width: 680px; margin: 0 auto 30px; }
+.hero .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* Problem: three pains */
+.pains { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+.pains h3 { font-size: 20px; margin-bottom: 6px; }
+
+/* How it works */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+.steps .num { font-family: "Fraunces", Georgia, serif; font-size: 34px; color: var(--accent); }
+.steps h3 { font-size: 21px; margin: 6px 0 8px; }
+
+/* Plus: the empty chair */
+.plus { background: var(--accent-soft); border-left: 6px solid var(--accent); border-radius: var(--radius); padding: 32px; }
+.plus h2 { margin-top: 6px; }
+
+/* Who gains what */
+.gains { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+.gains ul, .scope ul { padding-left: 20px; display: grid; gap: 6px; margin-top: 10px; }
+
+/* Trust */
+.trust { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; margin-top: 24px; }
+.trust li { padding-left: 28px; position: relative; }
+.trust li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+/* Scope */
+.scope { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; align-items: start; }
+.scope .later { background: transparent; border-style: dashed; color: var(--muted); }
+
+/* Closing call to action */
+.cta { text-align: center; }
+.cta p { color: var(--muted); margin-bottom: 24px; }
+
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; text-align: center; font-size: 14px; color: var(--faint); }
+
+@media (max-width: 760px) {
+  .hero h1 { font-size: 38px; }
+  .pains, .steps, .gains, .trust, .scope { grid-template-columns: 1fr; }
+  section { padding: 52px 0; }
+}

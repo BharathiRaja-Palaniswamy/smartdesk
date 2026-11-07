@@ -1,0 +1,121 @@
+/* SmartDesk pamphlet: one printed page (A4). Borders only, no shadows,
+   so every PDF viewer renders it the same. */
+
+:root {
+  --ink: #1b2340;
+  --muted: #5a6078;
+  --faint: #8a8fa3;
+  --accent: #7a3b6e;
+  --accent-soft: #f4e9f1;
+  --line: #e2dfe6;
+  --paper: #fbfaf7;
+}
+
+@page { size: A4; margin: 0; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Figtree", Arial, sans-serif;
+  font-size: 9.5pt;
+  line-height: 1.4;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 10mm 14mm 8mm;
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+}
+
+h1, h2, h3, .headline, .closing { font-family: "Fraunces", Georgia, serif; }
+
+/* Hero */
+.hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2mm; }
+.badge {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 1mm 4mm;
+  font-size: 8.5pt;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+h1 { font-size: 28pt; font-weight: 600; line-height: 1.05; }
+.subtitle { font-size: 11pt; color: var(--muted); }
+.headline { font-size: 13.5pt; font-style: italic; color: var(--accent); max-width: 150mm; line-height: 1.3; }
+.problem { color: var(--muted); max-width: 160mm; }
+
+/* Section labels */
+.label {
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 2mm;
+}
+
+/* Steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4mm;
+  padding: 4mm;
+}
+.num { font-family: "Fraunces", Georgia, serif; font-size: 18pt; color: var(--accent); line-height: 1; }
+h3 { font-size: 11pt; font-weight: 600; margin: 1.5mm 0 1mm; line-height: 1.25; }
+.card p { color: var(--muted); font-size: 9pt; }
+
+/* Plus callout */
+.plus {
+  display: flex;
+  gap: 5mm;
+  align-items: center;
+  background: var(--accent-soft);
+  border-left: 1.2mm solid var(--accent);
+  border-radius: 3mm;
+  padding: 3mm 5mm;
+}
+.plus strong {
+  color: var(--accent);
+  font-size: 9pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Trust */
+.trust { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; }
+.trust li { padding-left: 6mm; position: relative; }
+.trust li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+/* Scope */
+.scope { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
+.scope .card ul { padding-left: 4.5mm; display: flex; flex-direction: column; gap: 0.5mm; }
+.scope .note { color: var(--muted); font-size: 9pt; margin-bottom: 2mm; }
+.scope .later { background: transparent; border-style: dashed; color: var(--faint); }
+.scope h2 { font-size: 13pt; font-weight: 600; margin-bottom: 2mm; }
+
+/* Footer */
+footer { margin-top: auto; border-top: 1px solid var(--line); padding-top: 3mm; text-align: center; display: flex; flex-direction: column; gap: 1.5mm; }
+.closing { font-size: 12.5pt; font-style: italic; }
+.disclaimer, .contact { font-size: 8.5pt; color: var(--faint); }
+.contact a { color: var(--muted); }
+
+@media print { .page { height: 297mm; } }
+
+/* Narrow screens (the page as a website) */
+@media screen and (max-width: 720px) {
+  .page { width: auto; min-height: 0; padding: 24px 16px; }
+  .steps, .scope, .trust { grid-template-columns: 1fr; }
+  .plus { flex-direction: column; align-items: flex-start; }
+}

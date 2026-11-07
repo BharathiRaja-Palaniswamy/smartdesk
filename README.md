@@ -2,14 +2,16 @@
 
 **An AI front desk for appointment-based businesses.**
 
-> **Status: proposed product, concept stage.** A working single-business version
+> **Status: proposed product, in development.** A working single-business version
 > already exists (see [Where it starts](#where-it-starts)); SmartDesk turns it
 > into a platform any appointment-based business can sign up to.
 
-SmartDesk answers customers from owner-approved knowledge, handles booking from
-start to finish by chat and phone, and helps fill cancelled slots.
+SmartDesk answers customers from the business's own documents, handles booking
+from start to finish by chat and phone, and helps fill cancelled slots.
 
-📄 **Pitch pamphlet:** [SmartDesk.pdf](pamphlet/SmartDesk.pdf)
+📄 **Pitch pamphlet:** [SmartDesk.pdf](pamphlet/SmartDesk.pdf) (the original
+pitch; the first release is narrower, see [Scope](#scope)) ·
+🗺️ **Build plan:** [docs/PLAN.md](docs/PLAN.md)
 
 ---
 
@@ -21,24 +23,24 @@ Open slots go unfilled.
 
 ## What SmartDesk does
 
-1. **Learns your business, with your approval.** You share service details,
-   policies, documents and past support call recordings you're authorized to use.
-   SmartDesk transcribes, cleans and organizes them, flags gaps and conflicts,
-   and asks you to resolve them. Nothing goes live until you approve it.
+1. **Learns your business from your documents.** You enter the basics and
+   upload your price lists, service menus, policies and FAQs (PDF, Word, text,
+   or photos). SmartDesk reads them, builds a services table you can check and
+   edit, and makes the rest searchable for your assistant.
 2. **Answers your customers** on your website and over the phone, using only
-   your approved knowledge.
+   your documents. When they don't say, it says so and hands over to your staff.
 3. **Handles booking from start to finish.** Check availability, book,
-   reschedule or cancel in one conversation. Anything it can't handle goes to
-   your staff, with the reason attached.
+   reschedule or cancel in one conversation, from your services table and
+   calendar. Anything it can't handle goes to your staff, with the reason attached.
 4. **Plus: fills cancelled slots.** When an appointment is cancelled, SmartDesk
    can offer the opening to eligible customers on your waitlist who opted in.
    No booking is confirmed until the customer accepts.
 
 ## Built on trust
 
-- Answers come only from knowledge the owner has approved.
-- Call recordings only *suggest* knowledge; the owner decides what's true.
-  Documents win over recordings; conflicts go to the owner.
+- Answers come only from your documents; prices for booking come only from the
+  services table you can see and edit.
+- Each business's information is kept separate.
 - Personal details are hidden before anything is stored.
 - Customers opt in to waitlist offers and accept before they're booked.
 - Booking actions are done by code, only after the customer confirms exactly
@@ -46,11 +48,12 @@ Open slots go unfilled.
 
 ## Scope
 
-| Initial scope (spas and salons first) | Planned for later |
+| First release (spas and salons first) | Planned for later |
 |---|---|
-| Business knowledge from documents and call recordings, owner-approved | Campaign management |
-| Website chat assistant | More customer engagement workflows |
-| Phone support | |
+| Onboarding from business basics and documents | Learning from past support call recordings |
+| Services table, checked and editable by the owner | Owner review of gaps and conflicts before going live |
+| Website chat assistant | Campaign management |
+| Phone support | More customer engagement workflows |
 | Full booking: availability, book, reschedule, cancel | |
 | Hand-off to staff | |
 | Filling cancelled slots from the waitlist | |
@@ -70,28 +73,30 @@ SmartDesk grows out of a working AI front desk built for one fictional spa
 | Hand-off to staff with a reason | ✅ | Reused |
 | Evaluations and production tracing (LangSmith) | ✅ | Per business |
 | Many businesses on one engine | Designed for, one running | **New** |
-| Onboarding from documents and call recordings | — | **New** |
-| Owner review and approval of knowledge | — | **New** |
+| Onboarding from uploaded documents, with a services table | — | **New** |
 | Cancellation-slot recovery from the waitlist | — | **New** |
 
-## How it will be built
+## How it is built
 
-- **Agents:** a front-desk agent per business (chat and phone), plus onboarding
-  and waitlist agents; booking itself stays in code.
-- **Knowledge:** speech-to-text, cleaning and classification turn documents and
-  recordings into suggestions; approved knowledge is searched with RAG. Graph
-  RAG is considered only where evaluations show linked questions failing.
-- **Quality:** each business gets its own test set; live conversations are
-  traced and sampled for human review.
+- **Agents:** Front Desk (chat and phone), Feedback and Owner agents, reused
+  and made per business; booking, matching and consent stay in code.
+- **Document intelligence:** pdfplumber and python-docx, with Claude reading
+  images and scanned pages; a services table extracted into a strict Pydantic
+  schema, normalised and validated by code, with an exact quote behind every
+  value. Sections are searched with RAG in each business's own Pinecone namespace.
+- **Quality:** a parser benchmark, per-field precision and recall, abstention
+  tests (no invented prices), per-business evals, and traced live conversations
+  sampled for human review.
+- **Security by default:** every agent and workflow is specified first, from
+  [templates](docs/templates/) that cover threats, test gates and live checks.
 
-## Roadmap
+## Try the preview
 
-1. Onboard a business in minutes: documents and recordings in, owner-approved knowledge out.
-2. Fill the empty chair: cancellation-slot recovery from an opt-in waitlist.
-3. Many businesses on one engine.
-4. Campaign management and engagement workflows.
+The front end is a static preview (sample data, no backend yet):
+`web/index.html` (landing page), `web/onboard.html` (onboarding),
+`web/demo/pebble-spa.html` (the chat widget on a business's site).
 
 ---
 
-*SmartDesk is a proposed product in concept stage. Features marked new or
+*SmartDesk is a proposed product in development. Features marked new or
 planned are not yet available.*

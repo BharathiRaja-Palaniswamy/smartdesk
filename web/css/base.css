@@ -1,0 +1,82 @@
+/* Shared by every page: colours, type, buttons, layout helpers. */
+
+:root {
+  --ink: #1b2340;
+  --muted: #5a6078;
+  --faint: #8a8fa3;
+  --accent: #7a3b6e;
+  --accent-dark: #5e2c55;
+  --accent-soft: #f4e9f1;
+  --good: #1f7a6b;
+  --good-soft: #e3f2ef;
+  --warn: #9a5b00;
+  --warn-soft: #fbf0dc;
+  --line: #e2dfe6;
+  --paper: #fbfaf7;
+  --card: #ffffff;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Figtree", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 600; line-height: 1.15; }
+a { color: var(--accent); }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.muted { color: var(--muted); }
+
+.btn {
+  display: inline-block;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 999px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover { background: var(--accent-dark); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.ghost:hover { background: var(--accent-soft); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.badge {
+  display: inline-block;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Top bar shared by the landing page and onboarding */
+.topbar { border-bottom: 1px solid var(--line); background: var(--paper); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.brand { font-family: "Fraunces", Georgia, serif; font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; }
