@@ -30,7 +30,8 @@ def desk(monkeypatch):
 
 def test_the_agent_cannot_book_or_cancel_directly_only_ask_the_booking_agent():
     names = [t.name for t in agent_tools("Asha", "4085550101")]
-    assert names == ["search_guide", "booking", "record_feedback", "hand_off"]
+    # The waitlist tools book nothing themselves: answer_offer books one offered slot, by code, on the customer's yes.
+    assert names == ["search_guide", "booking", "record_feedback", "hand_off", "join_waitlist", "answer_offer"]
 
 
 def test_a_customer_can_only_cancel_their_own_booking(desk):

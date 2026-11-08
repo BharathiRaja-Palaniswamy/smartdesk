@@ -21,7 +21,7 @@
 
 <main class="onboard">
 
-  <p class="preview-note">Preview: nothing you enter or upload leaves this browser yet, and the services table shows example rows until document reading is connected.</p>
+  <p class="preview-note">Demo build: one business at a time. Sign in as the owner first; your documents are read for real.</p>
 
   <ol class="stepper" aria-label="Setup steps">
     <li data-for="business">1. Your business</li>
@@ -90,9 +90,9 @@
     <p class="muted">Price lists, service menus, policies and FAQs. Your assistant answers from these, and books from the services table SmartDesk builds from them.</p>
     <label class="drop" id="drop" for="file-input">
       <strong>Drop files here or click to choose</strong>
-      <span class="muted">PDF, Word, text, CSV up to 50 MB · photos (JPG, PNG) up to 10 MB</span>
+      <span class="muted">PDF, Word, Markdown, text, CSV · up to 50 MB each</span>
       <input type="file" id="file-input" multiple hidden
-             accept=".pdf,.docx,.txt,.md,.csv,.jpg,.jpeg,.png">
+             accept=".pdf,.docx,.txt,.md,.csv">
     </label>
     <ul class="files" id="files"></ul>
     <label class="consent">
@@ -109,7 +109,7 @@
   <!-- Step 3: each document's progress, then the services table to check -->
   <section class="step" id="services">
     <h1>Your services</h1>
-    <p class="muted">SmartDesk is reading your documents. Your assistant answers questions from them, and books from this table: check the prices and durations, and fix anything wrong.</p>
+    <p class="muted">SmartDesk is reading your documents. Your assistant answers questions from them, and books from this table: check the prices and lengths, and fix anything wrong. Hover over "Your document" to see the words a row came from.</p>
     <ul class="progress" id="progress"></ul>
     <div id="services-ready" hidden>
       <table class="services">
@@ -119,7 +119,8 @@
         <tbody id="services-rows"></tbody>
       </table>
       <button class="link" type="button" id="add-service">+ Add a service</button>
-      <p class="hint">A service without a price can't be booked until you add one.</p>
+      <p class="hint">A service without a length or price can't be booked until you add one.</p>
+      <ul class="read-problems" id="services-problems" aria-label="What could not be read"></ul>
       <p class="error" id="services-error" role="alert"></p>
       <div class="actions">
         <button class="btn ghost" type="button" data-back>Back</button>
@@ -132,7 +133,7 @@
   <section class="step" id="complete">
     <p class="done-mark" aria-hidden="true">✓</p>
     <h1 id="done-title">You're set up</h1>
-    <p class="muted">Your assistant answers from your documents and books from your services table. Add it to your website to go live.</p>
+    <p class="muted">Your assistant answers from your documents and books from your services table. Add it to your website, or <a href="/web/demo/sample-business.html" target="_blank" rel="noopener">try it on a sample page</a>.</p>
     <h3>Add the chat to your website</h3>
     <p class="muted">Paste this just before <code>&lt;/body&gt;</code> on your site.</p>
     <pre class="snippet" id="snippet"></pre>
@@ -145,15 +146,13 @@
     </ul>
     <a class="btn" href="index.html">Back to home</a>
 
-    <!-- Development only: empty or remove this business's cell
-         (docs/workflows/go-live.md, parts C and D) -->
+    <!-- Development only: start onboarding over (docs/workflows/go-live.md, part C) -->
     <div class="danger" id="danger">
       <p class="label">Development only</p>
-      <h3>Reset</h3>
-      <p class="muted">Reset onboarding empties your documents, search and services table, and keeps your basics, widget and phone. Delete business removes everything for this business. Neither can be undone.</p>
+      <h3>Reset onboarding</h3>
+      <p class="muted">Forgets the documents and services table you just set up, so you can onboard again. Customers' bookings are kept. It can't be undone.</p>
       <div class="danger-actions">
-        <button class="btn ghost danger-btn" type="button" data-reset="onboarding">Reset onboarding</button>
-        <button class="btn ghost danger-btn" type="button" data-reset="business">Delete business</button>
+        <button class="btn ghost danger-btn" type="button" id="reset-start">Reset onboarding</button>
       </div>
       <div id="reset-confirm" hidden>
         <label class="field" for="reset-name">
@@ -162,9 +161,10 @@
         </label>
         <div class="danger-actions">
           <button class="btn ghost" type="button" id="reset-cancel">Cancel</button>
-          <button class="btn danger-go" type="button" id="reset-go" disabled></button>
+          <button class="btn danger-go" type="button" id="reset-go" disabled>Reset onboarding</button>
         </div>
       </div>
+      <p class="error" id="reset-error" role="alert"></p>
       <ul class="progress" id="reset-progress" hidden></ul>
     </div>
   </section>

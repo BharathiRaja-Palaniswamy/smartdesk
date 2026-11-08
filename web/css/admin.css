@@ -1,0 +1,37 @@
+/* Admin console: summary tiles, filters, and the businesses table. */
+
+.admin { padding: 32px 16px 80px; }
+.admin .preview-note { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 14px; font-size: 14px; margin-bottom: 20px; }
+
+.summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 2px; }
+.tile .value { font-family: "Fraunces", Georgia, serif; font-size: 26px; }
+.tile .label { font-size: 13px; color: var(--muted); }
+
+.controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; color: var(--muted); }
+.controls label { display: flex; gap: 8px; align-items: center; }
+.controls select, .controls input { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: #fff; color: var(--ink); }
+
+.table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.businesses { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 980px; }
+.businesses th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.businesses td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.businesses tr:last-child td { border-bottom: 0; }
+.stack { display: grid; gap: 2px; }
+.stack .muted, .muted { color: var(--muted); font-size: 13px; }
+.warn { color: #a3302a; font-weight: 600; }
+
+.status { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; text-transform: capitalize; }
+.status.live { background: var(--good-soft); color: var(--good); }
+.status.draft { background: #eef0f4; color: var(--muted); }
+.status.paused { background: var(--warn-soft); color: var(--warn); }
+.status.failed { background: #fbeceb; color: #a3302a; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; text-decoration: underline; padding: 0; }
+.link:disabled { color: var(--faint); cursor: default; text-decoration: none; }
+.note { margin-top: 12px; }
+
+@media (max-width: 760px) {
+  .summary { grid-template-columns: repeat(2, 1fr); }
+}

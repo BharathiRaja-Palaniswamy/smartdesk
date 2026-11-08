@@ -30,7 +30,7 @@ stands in for the phone number.
 import logging
 from dataclasses import dataclass, field, replace
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from ..replies import MAX_SUGGESTIONS, ReplyItem
 from .debug import steps
@@ -62,6 +62,18 @@ class Turn:
     suggestions: list[str] = field(default_factory=list)
     confirming: bool = False  # the agent asked the customer to confirm a booking or cancellation
     debug: list[dict] = field(default_factory=list)  # what happened between the agents (debug.py)
+
+
+def customer_phone(thread: str) -> str:
+    """The phone number the conversation `thread` holds; "" before they gave it."""
+    return get_graph().get_state({"configurable": {"thread_id": thread}}).values.get("phone", "") or ""
+
+
+def tell(thread: str, text: str) -> None:
+    """Add `text` to the conversation `thread` as the assistant's message, for
+    something the system says unasked (a slot offered from the waitlist), so
+    the agent reads it with the rest when the customer answers."""
+    get_graph().update_state({"configurable": {"thread_id": thread}}, {"messages": [AIMessage(content=text)]})
 
 
 def hand_over(thread: str, reason: str, said: str = "", caller: str = "") -> Turn:

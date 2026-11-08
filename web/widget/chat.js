@@ -3,9 +3,11 @@
      <script src=".../widget/chat.js" data-business="pub_..." defer></script>
 
    It draws a chat button and panel inside a Shadow DOM, so the site's styles
-   and the widget's never touch. Replies come from a "brain" with one method,
-   reply(text, business) -> Promise<string>. Today that is mock.js (canned
-   replies); later it is the SmartDesk API. This file does not change then.
+   and the widget's never touch. Replies come from the "brain" (brain.js): the
+   business's real Front Desk agent on the SmartDesk server. A reply is an
+   answer, an optional list (shown as lines under it) and suggested next
+   questions (shown as buttons). While open, after the first message, it
+   checks every few seconds for a slot offered from the waitlist.
 
    Messages are always set as text, never HTML: a reply can't run code on the
    business's page. */
@@ -14,6 +16,7 @@
   const script = document.currentScript;
   const base = script.src.replace(/chat\.js(\?.*)?$/, "");
   const key = script.dataset.business || "";
+  const OFFER_CHECK_MS = 5000;  // how often an open chat checks for a slot offered from the waitlist
 
   /** Load another widget file next to this one. */
   function load(file) {
@@ -33,8 +36,7 @@
     return node;
   }
 
-  function build(brain) {
-    const business = brain.business(key);   // null: not set up for this key
+  function build(brain, business) {   // business: null when not set up for this key
     const host = el("div");
     host.id = "smartdesk-widget";
     document.body.append(host);
@@ -78,9 +80,39 @@
     panel.append(head, log, quick, form, note);
     root.append(style, launcher, panel);
 
-    function say(who, text) {
-      log.append(el("p", `msg ${who}`, text));
+    function say(who, text, items = []) {
+      const message = el("p", `msg ${who}`, text);
+      // A list under the answer (services, bookings, times): one line each, as text.
+      items.forEach((item) => message.append(el("span", "item", `${item.name}: ${item.detail}`)));
+      log.append(message);
       log.scrollTop = log.scrollHeight;
+    }
+
+    function offer(suggestions) {
+      quick.replaceChildren(...suggestions.map((text) => {
+        const chip = el("button", "chip", text);
+        chip.type = "button";
+        chip.addEventListener("click", () => ask(text));
+        return chip;
+      }));
+    }
+
+    let checking = null;  // the timer that checks for offers, once the customer has written
+
+    function checkOffers() {
+      if (checking) return;
+      checking = setInterval(async () => {
+        if (panel.hidden) return;
+        try {
+          const found = await brain.offer();
+          if (found) {
+            say("them", found.text);
+            offer(found.suggestions);
+          }
+        } catch {
+          // a missed check is fine: the next one comes in a few seconds
+        }
+      }, OFFER_CHECK_MS);
     }
 
     async function ask(text) {
@@ -93,7 +125,10 @@
       const typing = el("p", "msg them typing", "…");
       log.append(typing);
       try {
-        say("them", await brain.reply(text, business));
+        const reply = await brain.reply(text);
+        say("them", reply.answer, reply.items);
+        offer(reply.suggestions);
+        checkOffers();
       } catch {
         say("them", "Sorry, I can't answer right now. Please call us, or try again in a moment.");
       } finally {
@@ -119,12 +154,7 @@
         return;
       }
       say("them", business.greeting);
-      business.suggestions.forEach((text) => {
-        const chip = el("button", "chip", text);
-        chip.type = "button";
-        chip.addEventListener("click", () => ask(text));
-        quick.append(chip);
-      });
+      offer(business.suggestions);
     }
 
     launcher.addEventListener("click", () => open(true));
@@ -135,6 +165,8 @@
     if (script.dataset.open === "true") open(true);
   }
 
-  load("mock.js").then(() => build(window.SmartDeskBrain))
+  load("brain.js")
+    .then(() => window.SmartDeskBrain.business(key))
+    .then((business) => build(window.SmartDeskBrain, business))
     .catch(() => console.warn("SmartDesk: the chat could not load."));
 })();

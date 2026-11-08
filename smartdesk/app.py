@@ -22,7 +22,11 @@ Routes:
   POST /api/assistant           the customer chat: the Front Desk agent (frontdesk/routes.py)
   GET  /api/feedback...         customers' feedback cards, for the owner (frontdesk/routes.py)
   POST /v1/chat/completions     the phone line: the same agent, called by ElevenLabs (voice/routes.py)
+  POST /api/onboarding/...      read uploaded documents; go live (onboarding/routes.py)
+  GET  /api/widget/offer        a slot offered to this chat's customer from the waitlist (waitlist/routes.py)
+  GET  /api/widget/business     the business a chat widget's key belongs to (widget/routes.py)
   GET  /static/...              CSS and JavaScript for the owner's pages
+  GET  /web/...                 the landing page, onboarding, the chat widget and its demo page
 """
 
 from pathlib import Path
@@ -38,16 +42,21 @@ from .frontdesk.routes import owner as feedback_cards
 from .frontdesk.routes import router as front_desk
 from .models.profiles import get_profile
 from .models.providers import NAMES
+from .onboarding.routes import router as onboarding
 from .owner.routes import router as owner_chat
 from .reports.routes import page_router as manage_page
 from .reports.routes import router as report_router
 from .tracing import setup as setup_tracing
 from .voice.routes import router as phone_line
+from .waitlist.routes import router as offers
+from .widget.routes import router as widget
 
 STATIC = Path(__file__).parent / "static"
+WEB = Path(__file__).parent.parent / "web"  # the landing page, onboarding, the chat widget and its demo page
 setup_tracing()  # before any request: hides personal details in every trace (tracing.py)
 app = FastAPI(title="SmartDesk")
-for router in (manage_page, report_router, owner_chat, owner_sign_in, front_desk, feedback_cards, phone_line):
+for router in (manage_page, report_router, owner_chat, owner_sign_in, front_desk, feedback_cards, phone_line, widget,
+               onboarding, offers):
     app.include_router(router)
 
 
@@ -93,3 +102,4 @@ class FreshStaticFiles(StaticFiles):
 # Serves every file in static/ under /static/. Mounted last so it cannot
 # shadow the routes above.
 app.mount("/static", FreshStaticFiles(directory=STATIC), name="static")
+app.mount("/web", FreshStaticFiles(directory=WEB, html=True), name="web")

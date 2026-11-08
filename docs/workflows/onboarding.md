@@ -2,6 +2,21 @@
 
 From `docs/templates/WORKFLOW.md`. Status: **draft for review**.
 
+## Demo build (before cells)
+
+For Demo Day, one business, without cells (M2) or background jobs:
+
+- Upload: Markdown, text, PDF and Word documents, read in the request
+  (readers.py); images and scanned pages come later.
+- Services table: one model call per upload (`document-reader` profile), with
+  the exact-quote check, normalising and validation in code (services.py).
+- Search: the uploaded document becomes the one the Front Desk agent searches.
+- Go live: the owner's edited services table and the document are saved in
+  the business's storage (`storage/business/`); the agent uses them at once.
+- Booking still reads services, staff and hours from the document's own
+  structure (a Markdown business document), until booking reads the services
+  table instead.
+
 ## 1. Purpose and boundaries *(Developer)*
 
 | | |

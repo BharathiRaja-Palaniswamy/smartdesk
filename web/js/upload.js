@@ -7,7 +7,6 @@
   const MB = 1024 * 1024;
   const KINDS = {
     document: { ext: ["pdf", "docx", "txt", "md", "csv"], max: 50 * MB, limit: "50 MB" },
-    image: { ext: ["jpg", "jpeg", "png"], max: 10 * MB, limit: "10 MB" },
   };
   const MAX_FILES = 30;
 

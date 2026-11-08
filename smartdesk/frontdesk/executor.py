@@ -45,6 +45,7 @@ from ..booking.actions import confirmation
 from ..booking.appointments import Appointments, get_appointments
 from ..booking.calendars import Booking
 from ..booking.errors import UNAVAILABLE, BookingError, CalendarUnavailable
+from ..waitlist.recovery import opened
 from .booking import Plan, check_plan
 from .rules import MAX_FAILED_PLANS
 from .staff import record_handoff
@@ -162,7 +163,9 @@ def cancel(references: list[str], phone: str) -> dict[str, Any]:
     cancelled, problems = [], []
     for reference in references:
         try:
-            cancelled.append(confirmation(get_appointments().cancel(reference, phone)))
+            freed = get_appointments().cancel(reference, phone)
+            cancelled.append(confirmation(freed))
+            opened(freed)  # the empty chair: offered to the next customer waiting for it (waitlist/)
         except BookingError as error:
             problems.append(f"{reference}: {error}")
         except CalendarUnavailable:

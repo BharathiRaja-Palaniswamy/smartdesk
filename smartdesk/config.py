@@ -52,6 +52,9 @@ class Settings:
     """Values that can differ per machine. Read once by `get_settings`."""
 
     data_path: Path | None  # the business document the assistants answer from; None when not set
+    business_folder: Path  # where the onboarded business's document and services table are kept
+    offer_minutes: int  # slot recovery: how long a cancelled slot is held for the waiter offered it
+    widget_key: str  # the key the business's chat widget is pasted with (demo build: one business)
     assistant_name: str  # the name the customer chat's assistant gives itself, e.g. "Robin"; "" for none
     eval_set_path: Path | None  # the business's golden eval set (evals/); None when not set
     report_data_path: Path | None  # the bookings JSON the report dashboard reads; None when not set
@@ -65,6 +68,7 @@ class Settings:
     retrieval_top_k: int  # search: how many chunks are given to the model for a question
     reranker: str  # search: "pinecone" to rerank the candidates, or "none"
     rerank_candidates: int  # search: how many chunks the first search fetches for the reranker to choose from
+    calendar: str  # booking: "google" (the business's calendars) or "memory" (a sandbox, for demos and tests)
     slot_minutes: int  # booking: appointments start on this grid, e.g. every 30 minutes from opening
     min_notice_minutes: int  # booking: the fewest minutes ahead a booking can be made, changed or cancelled
     handoffs_path: Path  # the chat: where requests for the staff to call a customer back are appended
@@ -100,6 +104,9 @@ def get_settings() -> Settings:
     # otherwise the default written here.
     return Settings(
         data_path=_path("SMARTDESK_DATA"),
+        business_folder=Path(os.getenv("SMARTDESK_BUSINESS_FOLDER", ROOT / "storage" / "business")),
+        offer_minutes=int(os.getenv("SMARTDESK_OFFER_MINUTES", "15")),
+        widget_key=os.getenv("SMARTDESK_WIDGET_KEY", ""),
         assistant_name=os.getenv("SMARTDESK_ASSISTANT_NAME", ""),
         eval_set_path=_path("SMARTDESK_EVAL_SET"),
         report_data_path=_path("SMARTDESK_REPORT_DATA"),
@@ -113,6 +120,7 @@ def get_settings() -> Settings:
         retrieval_top_k=int(os.getenv("SMARTDESK_RETRIEVAL_TOP_K", "3")),
         reranker=os.getenv("SMARTDESK_RERANKER", "pinecone"),
         rerank_candidates=int(os.getenv("SMARTDESK_RERANK_CANDIDATES", "20")),
+        calendar=os.getenv("SMARTDESK_CALENDAR", "google"),
         slot_minutes=int(os.getenv("SMARTDESK_SLOT_MINUTES", "30")),
         min_notice_minutes=int(os.getenv("SMARTDESK_MIN_NOTICE_MINUTES", "30")),
         handoffs_path=Path(os.getenv("SMARTDESK_HANDOFFS", ROOT / "storage" / "handoffs.jsonl")),

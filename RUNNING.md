@@ -46,6 +46,37 @@ chat widget on the business's own website, and by phone.
 
 `--reload` restarts the server whenever you save a Python file.
 
+## The demo build (one business, nothing reaches a real calendar)
+
+The settings the demo runs with, in `.env` (keys from your own accounts):
+
+```sh
+SMARTDESK_MODELS=opensource            # the open-source models through Nebius (NEBIUS_API_KEY)
+SMARTDESK_DATA=tests/fixtures/business.md          # the made-up test business, until one is onboarded
+SMARTDESK_REPORT_DATA=tests/fixtures/bookings.json
+SMARTDESK_VECTOR_STORE=memory          # search kept in memory (Pinecone's embeddings and reranker)
+SMARTDESK_CALENDAR=memory              # bookings kept in memory: never a real calendar
+SMARTDESK_WIDGET_KEY=pub_demo_sample   # the key the demo page's widget uses
+SMARTDESK_ASSISTANT_NAME=Robin
+SMARTDESK_OWNER_PASSWORD=...           # your own, to sign in
+```
+
+Then start the app (section 3) and open, on http://127.0.0.1:8002 if you
+start it with `--port 8002`:
+
+| Page | What it shows |
+|---|---|
+| `/web/` | the landing page |
+| `/web/onboard.html` | onboarding: basics, documents (read for real), services table, go live |
+| `/web/demo/sample-business.html` | a business's website with the chat widget (the real agent) |
+| `/web/admin.html` | the admin console preview (sample businesses) |
+| `/manage` | the owner's console |
+
+The empty chair: in one browser window a customer asks for a time that is
+taken and agrees to the waitlist; in another, the customer who has that time
+cancels; the first window is offered the slot within a few seconds and
+books it with "Yes, book it". The phone line: docs/guides/phone-demo.md.
+
 ## 4. Run the tests
 
 ```sh

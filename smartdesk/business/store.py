@@ -20,9 +20,12 @@ def get_knowledge() -> KnowledgeBase:
 
 
 def document_path() -> Path:
-    """Where the business document is: SMARTDESK_DATA. SmartDesk holds no
-    business's data, so there is no default; without it, this says what to set."""
-    path = get_settings().data_path
+    """Where the business document is: the one onboarded (onboarding/store.py),
+    else the one SMARTDESK_DATA names. SmartDesk holds no business's data, so
+    there is no default; without either, this says what to set."""
+    from ..onboarding.store import live_document  # imported here: onboarding imports this module's users
+
+    path = live_document() or get_settings().data_path
     if path is None:
-        raise RuntimeError("No business document: set SMARTDESK_DATA to the business's document (markdown).")
+        raise RuntimeError("No business document: onboard one, or set SMARTDESK_DATA to the business's document.")
     return path

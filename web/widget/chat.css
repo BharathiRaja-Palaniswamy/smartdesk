@@ -65,6 +65,7 @@ header span { font-size: 12px; opacity: 0.85; }
 .msg.them { background: var(--soft); align-self: flex-start; border-bottom-left-radius: 4px; }
 .msg.me { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
 .msg.typing { color: var(--muted); }
+.msg .item { display: block; margin-top: 4px; font-size: 14px; }
 
 .quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
 .chip { border: 1px solid var(--accent); background: #fff; color: var(--accent); border-radius: 999px; padding: 5px 12px; font-size: 13px; }

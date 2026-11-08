@@ -35,7 +35,8 @@ class Role(str, Enum):
 
 PERMISSIONS: dict[Role, frozenset[str]] = {
     Role.CUSTOMER: frozenset({"search_guide", "contact_staff", "book"}),
-    Role.OWNER: frozenset({"search_guide", "contact_staff", "book", "reports", "voice_test", "feedback"}),
+    Role.OWNER: frozenset({"search_guide", "contact_staff", "book", "reports", "voice_test", "feedback",
+                        "onboarding"}),
 }
 
 

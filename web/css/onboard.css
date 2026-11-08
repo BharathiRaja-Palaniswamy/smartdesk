@@ -105,3 +105,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .danger-go { background: #a3302a; border-color: #a3302a; }
 .danger-go:hover { background: #82241f; }
 .danger .progress { margin-top: 16px; }
+
+/* What the reading could not use: shown under the services table */
+.read-problems { list-style: none; display: grid; gap: 4px; margin-top: 10px; font-size: 13px; color: var(--warn); }
+.read-problems:empty { display: none; }

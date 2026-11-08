@@ -51,6 +51,14 @@ os.environ["SMARTDESK_EVAL_SET"] = str(FIXTURES / "golden.json")
 
 
 @pytest.fixture(autouse=True)
+def own_business_folder(tmp_path, monkeypatch):
+    """Every test keeps the business's files (onboarded document, waitlist,
+    offers) in an empty temporary folder: a business onboarded on this machine
+    never reaches a test, and a test never writes into the project."""
+    monkeypatch.setenv("SMARTDESK_BUSINESS_FOLDER", str(tmp_path / "business"))
+
+
+@pytest.fixture(autouse=True)
 def fake_embeddings(monkeypatch):
     """Every test embeds with LangChain's DeterministicFakeEmbedding: the same
     text always gives the same vector, with no model and no network."""

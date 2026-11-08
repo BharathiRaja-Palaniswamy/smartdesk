@@ -22,7 +22,7 @@ record_feedback (the Feedback agent, feedback.py) and hand_off (staff.py).
 
 import logging
 import re
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -41,6 +41,7 @@ from ..config import get_settings
 from ..search.retriever import get_retriever
 from ..models import make_tool, structured
 from ..search.errors import ModelUnavailable
+from ..waitlist.recovery import answer, join
 from .booking import BookingRequest, describe, handle, missing_result
 from .debug import brief, note
 from .details import TIME_NOTE, collect
@@ -78,6 +79,10 @@ A request beyond one booking (a group, a series) is not a "no": it goes to the s
 threat: say plainly and calmly that we don't do that, without arguing. "The team will be in touch" is only \
 for a valid request we can't handle here. For a threat to anyone, staff included, also hand_off so the \
 staff know, but tell the customer only the plain no.
+- Waitlist: when the time they want is not free, offer to put them on the waitlist for that service and \
+day; only if they agree, call join_waitlist. If a slot opens they are offered it in this chat.
+- An offer in this chat ("Offer OF-...") that they answer: call answer_offer with that reference and \
+whether they said yes; tell them what it returns. Their yes to the offer is their confirmation.
 - Never share anything about other customers.
 - Plain sentences, no markdown. Two or three sentences usually; a list goes in `items`."""
 
@@ -212,7 +217,7 @@ log = logging.getLogger("smartdesk.frontdesk")
 HELD = {"booking"}
 # Tool -> the permission it needs. Every tool must be listed: one that is not is never offered.
 NEEDS = {"search_guide": "search_guide", "booking": "book", "record_feedback": "contact_staff",
-         "hand_off": "contact_staff"}
+         "hand_off": "contact_staff", "join_waitlist": "book", "answer_offer": "book"}
 
 
 def search_guide(args: dict[str, Any]) -> dict[str, Any]:
@@ -343,4 +348,40 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
              {"type": "object", "properties": {"reason": {"type": "string"}}, "required": ["reason"]},
              lambda args: {"handed_off": True, **record_handoff(name, phone, handoff_reason(args, words))}),
     ]
+    tools += [
+        make_tool("join_waitlist",
+             "Puts the customer on the waitlist for a service on a day, when the time they want is not free. "
+             "Call it only after they agreed to wait. If a slot opens, they are offered it in this chat.",
+             {"type": "object", "properties": {
+                 "service": {"type": "string", "description": "The service's exact name, as the guide writes it."},
+                 "day": {"type": "string", "description": "The day, as YYYY-MM-DD."},
+                 "after": {"type": "string", "description": "Only times from this hour on, as HH:MM; leave out for any."},
+                 "before": {"type": "string", "description": "Only times before this hour, as HH:MM; leave out for any."}},
+              "required": ["service", "day"]},
+             guarded(lambda args: waitlist_join(args, name, phone))),
+        make_tool("answer_offer",
+             "The customer's answer to a slot offered in this chat (\"Offer OF-...\"): yes books exactly that "
+             "slot, no lets it go to the next customer waiting.",
+             {"type": "object", "properties": {
+                 "offer": {"type": "string", "description": "The offer's reference, e.g. OF-1A2B3C."},
+                 "accept": {"type": "boolean", "description": "True if they said yes to it."}},
+              "required": ["offer", "accept"]},
+             guarded(lambda args: answer(str(args.get("offer", "")), phone, bool(args.get("accept"))))),
+    ]
     return [tool for tool in tools if allowed(role, NEEDS.get(tool.name, ""))]
+
+
+def waitlist_join(args: dict[str, Any], name: str, phone: str) -> dict[str, Any]:
+    """join_waitlist, checked: a service the business offers, a real day, and times as HH:MM."""
+    schedule = read_schedule(get_knowledge())
+    service = str(args.get("service") or "").strip()
+    if service not in schedule.services:
+        return {"error": f"There is no service called {service!r}; use the guide's exact name."}
+    try:
+        day = date.fromisoformat(str(args.get("day") or ""))
+        after = time.fromisoformat(args["after"]) if args.get("after") else None
+        before = time.fromisoformat(args["before"]) if args.get("before") else None
+    except ValueError:
+        return {"error": "The day must be YYYY-MM-DD and times HH:MM."}
+    entry = join(name, phone, service, day, after, before)
+    return {"waiting": True, "service": service, "day": entry["day"]}

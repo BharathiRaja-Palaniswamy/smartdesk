@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartDesk admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="index.html">SmartDesk</a>
+    <span class="muted">Admin · monitoring every business</span>
+  </div>
+</header>
+
+<main class="admin wrap">
+  <p class="preview-note">Preview with sample businesses: the real list comes from the registry once businesses have their own cells. It shows each business's health, never its documents, customers or chats.</p>
+
+  <section class="summary" id="summary" aria-label="All businesses at a glance"></section>
+
+  <div class="controls">
+    <label>Status
+      <select id="status-filter">
+        <option value="">All</option>
+        <option>live</option><option>draft</option><option>paused</option><option>failed</option>
+      </select>
+    </label>
+    <label>Search <input type="search" id="search" placeholder="Business name"></label>
+  </div>
+
+  <div class="table-wrap">
+    <table class="businesses">
+      <thead>
+        <tr><th>Business</th><th>Status</th><th>Channels</th><th>Services</th><th>Last 7 days</th>
+            <th>Last 24 h</th><th>Cost today</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="muted note">Failed and paused businesses are listed first. Every action is logged. Simulate opens a chat with that business's real agent in a sandbox, and counts as support access.</p>
+</main>
+
+<script src="js/admin-sample.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
