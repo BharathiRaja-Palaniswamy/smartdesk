@@ -54,12 +54,19 @@ def test_a_waiter_for_another_service_day_or_window_is_not_offered(desk):
     assert load("offers") == []
 
 
+def test_one_exact_time_is_a_window_from_and_to_that_time(desk):
+    # As seen with the real model: "only 3pm" became after 15:00, before 15:00.
+    recovery.join("Ben", BEN, "Prenatal Massage", FRIDAY, after=time(15, 0), before=time(15, 0))
+    booked_and_cancelled(desk)
+    assert recovery.open_for(BEN)["start"] == THREE_PM.isoformat()
+
+
 def test_yes_books_exactly_the_offered_slot(desk):
     recovery.join("Ben", BEN, "Prenatal Massage", FRIDAY)
     booked_and_cancelled(desk)
     offer = recovery.open_for(BEN)
     result = recovery.answer(offer["id"], BEN, accept=True)
-    assert result["booked"]["staff_member"] == "Dev Patel"
+    assert [b["staff_member"] for b in result["booked"]] == ["Dev Patel"]
     [booking] = desk.calendar.bookings(THREE_PM, THREE_PM + timedelta(hours=1))
     assert (booking.name, booking.phone, booking.start) == ("Ben", BEN, THREE_PM)
     assert load("waitlist")[0]["status"] == "booked"
@@ -118,3 +125,13 @@ def test_the_widget_is_shown_its_customers_offer_once_and_the_agent_hears_of_it(
     assert client.get("/api/widget/offer", params={"thread": "ben-chat-1"}).json() is None  # shown once
     assert client.get("/api/widget/offer", params={"thread": "someone-else"}).json() is None
     assert frontdesk.customer_phone  # the real lookup exists
+
+
+def test_a_yes_result_reads_like_any_booking_result(desk):
+    # As seen live: the debug note and the agent read "booked" as a list of bookings.
+    from smartdesk.frontdesk.debug import outcome
+
+    recovery.join("Ben", BEN, "Prenatal Massage", FRIDAY)
+    booked_and_cancelled(desk)
+    result = recovery.answer(recovery.open_for(BEN)["id"], BEN, accept=True)
+    assert outcome(result).startswith("booked BK-")

@@ -355,8 +355,8 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
              {"type": "object", "properties": {
                  "service": {"type": "string", "description": "The service's exact name, as the guide writes it."},
                  "day": {"type": "string", "description": "The day, as YYYY-MM-DD."},
-                 "after": {"type": "string", "description": "Only times from this hour on, as HH:MM; leave out for any."},
-                 "before": {"type": "string", "description": "Only times before this hour, as HH:MM; leave out for any."}},
+                 "after": {"type": "string", "description": "The earliest start time they want, as HH:MM; leave out for any."},
+                 "before": {"type": "string", "description": "The latest start time they want, as HH:MM (the same as after for one exact time); leave out for any."}},
               "required": ["service", "day"]},
              guarded(lambda args: waitlist_join(args, name, phone))),
         make_tool("answer_offer",

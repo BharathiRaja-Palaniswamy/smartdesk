@@ -18,7 +18,7 @@ From `docs/templates/WORKFLOW.md`. Status: **demo build**.
 |---|---|---|---|
 | 1 | Join the waitlist | the agent's `join_waitlist` tool (code) | when a wanted time is not free and the customer **agrees** to wait: service, day, optional time window, and when they agreed |
 | 2 | A slot opens | code, after a cancellation | the cancelled booking's service, staff member and time |
-| 3 | Match | code | the **earliest-joined** waiting customer who wants that service on that day, in a window that holds the start, and has no open offer; one at a time (D6) |
+| 3 | Match | code | the **earliest-joined** waiting customer who wants that service on that day, with the start inside their window (both ends included: 15:00 to 15:00 is "3 pm only"), and has no open offer; one at a time (D6) |
 | 4 | Offer | code | an offer with an expiry (SMARTDESK_OFFER_MINUTES, 15 by default), shown in the customer's chat as soon as it is open (the widget checks every few seconds) and written into their conversation |
 | 5 | Answer | the agent's `answer_offer` tool (code) | yes → book that exact slot (still free, checked) and close the offer; no → close it and offer the next match |
 | 6 | Expiry | code | an offer not answered in time closes, and the next match is offered |

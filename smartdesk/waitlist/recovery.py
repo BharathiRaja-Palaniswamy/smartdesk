@@ -1,7 +1,8 @@
 """Who waits, who is offered a cancelled slot, and what their answer does.
 
     join      a customer who agreed to wait for a service on a day (and,
-              optionally, within a time window) is added, with when they agreed
+              optionally, starting within a time window, both ends included,
+              so 15:00 to 15:00 is "3 pm only") is added, with when they agreed
     opened    a slot opened by a cancellation is offered to the earliest-joined
               waiter who wants it, one at a time, for SMARTDESK_OFFER_MINUTES
     answer    yes books exactly that slot (checked free again); no closes the
@@ -51,7 +52,7 @@ def _wants(entry: dict[str, Any], slot: dict[str, Any]) -> bool:
     return (entry["status"] == "waiting" and entry["service"] == slot["service"]
             and entry["day"] == start.date().isoformat()
             and (not entry["after"] or start.strftime("%H:%M") >= entry["after"])
-            and (not entry["before"] or start.strftime("%H:%M") < entry["before"])
+            and (not entry["before"] or start.strftime("%H:%M") <= entry["before"])  # "3 pm only" is 15:00 to 15:00
             and digits(entry["phone"]) != digits(slot.get("freed_by", ""))
             and _slot_key(slot) not in entry["declined"])
 
@@ -149,7 +150,7 @@ def answer(offer_id: str, phone: str, accept: bool) -> dict[str, Any]:
         _close(offer["id"], "failed")
         return {"error": f"That time could not be booked: {error}"}
     _close(offer["id"], "accepted")
-    return {"booked": confirmation(booking)}
+    return {"booked": [confirmation(booking)]}  # a list, as every booking result is (executor.py)
 
 
 def offer_text(offer: dict[str, Any]) -> str:
