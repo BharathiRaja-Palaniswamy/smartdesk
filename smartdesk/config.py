@@ -52,10 +52,11 @@ class Settings:
     """Values that can differ per machine. Read once by `get_settings`."""
 
     data_path: Path | None  # the business document the assistants answer from; None when not set
-    business_folder: Path  # where the onboarded business's document and services table are kept
+    business_folder: Path  # where the onboarded business's document and phone line are kept
     offer_minutes: int  # slot recovery: how long a cancelled slot is held for the waiter offered it
     widget_key: str  # the key the business's chat widget is pasted with (demo build: one business)
     assistant_name: str  # the name the customer chat's assistant gives itself, e.g. "Robin"; "" for none
+    phone_number: str  # demo build: the line given to an owner who asks for phone support (D32); "" for none
     eval_set_path: Path | None  # the business's golden eval set (evals/); None when not set
     report_data_path: Path | None  # the bookings JSON the report dashboard reads; None when not set
     timezone: str  # the business's time zone, used to tell the assistant the current time
@@ -108,6 +109,7 @@ def get_settings() -> Settings:
         offer_minutes=int(os.getenv("SMARTDESK_OFFER_MINUTES", "15")),
         widget_key=os.getenv("SMARTDESK_WIDGET_KEY", ""),
         assistant_name=os.getenv("SMARTDESK_ASSISTANT_NAME", ""),
+        phone_number=os.getenv("SMARTDESK_PHONE_NUMBER", "").strip(),
         eval_set_path=_path("SMARTDESK_EVAL_SET"),
         report_data_path=_path("SMARTDESK_REPORT_DATA"),
         timezone=os.getenv("SMARTDESK_TIMEZONE", "America/Los_Angeles"),

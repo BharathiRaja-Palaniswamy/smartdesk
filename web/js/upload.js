@@ -66,6 +66,6 @@
     if (!SD.files.length) { error.textContent = "Add at least one document."; return; }
     if (!authorized.checked) { error.textContent = "Please confirm you're authorized to share these files."; return; }
     error.textContent = "";
-    SD.go("services");
+    SD.go("ready");
   });
 })();

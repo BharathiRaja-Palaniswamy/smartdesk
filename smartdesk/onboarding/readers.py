@@ -83,3 +83,12 @@ def _word(name: str, data: bytes) -> Document:
     if not text:
         raise Unreadable(f"{name}: no text found.")
     return Document(name, "word", text, 1)
+
+
+def titled(text: str, business: str) -> str:
+    """`text` with `business` as its title ("# Name") when it has none: the
+    business's name is read from its document's title (business/knowledge.py),
+    and a PDF or a Word file has no Markdown title of its own."""
+    if text.lstrip().startswith("# "):
+        return text
+    return f"# {business.strip()}\n\n{text}"

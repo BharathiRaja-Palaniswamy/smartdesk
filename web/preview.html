@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Website Preview</title>
+<!-- The owner's preview (D33): a stand-in for the business's own website with
+     its SmartDesk chat added, exactly as the snippet adds it. Each tab is a
+     different customer, so the empty chair can be tried with two tabs. -->
+<link rel="stylesheet" href="css/preview.css">
+</head>
+<body>
+<p class="preview-bar" role="note">
+  <span><strong>Preview</strong> · how your customers see your chat. Bookings made here are real: cancel them when you're done.</span>
+  <button type="button" id="another">Open another customer</button>
+</p>
+
+<header class="site-hero">
+  <p class="site-kicker">Your website</p>
+  <h1 id="site-name">Your business</h1>
+  <p id="site-greeting">Open the chat at the bottom right.</p>
+</header>
+
+<main class="site-body">
+  <section class="try" aria-labelledby="try-title">
+    <h2 id="try-title">Try the empty chair</h2>
+    <ol>
+      <li>Here, book an appointment as one customer.</li>
+      <li>Open another customer and ask for the same time. It's taken, so join the waitlist.</li>
+      <li>Back here, cancel your booking.</li>
+      <li>Within a few seconds the other customer is offered the slot. Say yes, and it's booked.</li>
+    </ol>
+  </section>
+  <p class="error" id="preview-error" role="alert"></p>
+</main>
+
+<script src="js/preview.js"></script>
+</body>
+</html>

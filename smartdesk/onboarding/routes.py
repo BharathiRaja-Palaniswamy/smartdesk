@@ -1,25 +1,31 @@
 """The owner's onboarding routes.
 
-  POST /api/onboarding/read     the uploaded documents -> their text kept as a draft,
-                                and the services table read from it
-  POST /api/onboarding/go-live  the owner's services table -> the business goes live;
-                                answers with the chat widget's snippet
+  POST /api/onboarding/read     the uploaded documents -> their text, cleaned and kept as a draft
+  POST /api/onboarding/check    the safety check on the draft (safety.py) -> what it found, if anything
+  GET  /api/onboarding/phone    whether phone support can be added, and what it costs (phone.py)
+  GET  /api/onboarding/preview  the widget key, for the owner's preview of their website (D33)
+  POST /api/onboarding/go-live  {"phone": bool, "agree_cost": bool} -> the checked draft becomes
+                                the business's document, with a phone line if asked (D32);
+                                answers with the widget's snippet and the line's number
   POST /api/onboarding/reset    {"confirm": <the business's name>} -> onboarding starts over
 
-Both need the owner's sign-in (the "onboarding" permission).
+SmartDesk reads the documents as they are and asks the owner nothing about the
+business (D31); it only checks they are safe for customers. All need the
+owner's sign-in (the "onboarding" permission).
 """
 
 import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, model_validator
 
 from ..access.session import require
 from ..config import get_settings
 from ..models import ModelError
-from .readers import Unreadable, read
-from .services import Service, read_services, titled
-from .store import go_live, reset, save_draft
+from . import phone
+from .readers import Unreadable, read, titled
+from .safety import check, clean
+from .store import Blocked, draft_text, go_live, ready, reset, save_check, save_draft
 
 router = APIRouter(prefix="/api/onboarding", dependencies=[Depends(require("onboarding"))])
 log = logging.getLogger("smartdesk.onboarding")
@@ -32,66 +38,123 @@ class ReadDocument(BaseModel):
     pages: int
 
 
-class Row(BaseModel):
-    """One row of the services table, as the page shows and sends it."""
-
-    name: str = Field(min_length=1, max_length=120)
-    category: str = Field(default="", max_length=120)
-    minutes: int | None = Field(default=None, ge=5, le=600)
-    price: float | None = Field(default=None, gt=0)
-    quote: str = Field(default="", max_length=2000)  # the document's words it came from; "" when added by the owner
-
-
 class ReadAnswer(BaseModel):
     documents: list[ReadDocument]
-    services: list[Row]
-    problems: list[str]
+    problems: list[str]  # files that could not be used, and what was removed from the others
+
+
+class Finding(BaseModel):
+    kind: str
+    why: str  # the kind in the owner's words, e.g. "violent or threatening words"
+    quote: str  # the document's own words
+
+
+class Checked(BaseModel):
+    safe: bool
+    findings: list[Finding]
+
+
+class PhoneOffer(BaseModel):
+    available: bool
+    monthly: float  # dollars a month; the first month is free
+    per_minute: float  # dollars a minute of calls received
+
+
+class Preview(BaseModel):
+    key: str  # the widget key the business's snippet carries
 
 
 class GoLive(BaseModel):
-    services: list[Row] = Field(min_length=1)
+    phone: bool = False  # the owner wants calls answered too
+    agree_cost: bool = False  # and agreed to what the line costs
+
+    @model_validator(mode="after")
+    def _agreed(self) -> "GoLive":
+        if self.phone and not self.agree_cost:
+            raise ValueError("Agree to the phone line's cost to add phone support.")
+        return self
 
 
 class Live(BaseModel):
     snippet: str  # what the owner pastes on their website
+    phone: str | None  # the phone line, as people write it; None without phone support
 
 
 @router.post("/read")
 async def read_documents(files: list[UploadFile], business: str = Form(min_length=1, max_length=120)) -> ReadAnswer:
-    """Read the uploaded documents; their text waits as a draft until Go live.
-    `business` is the name the owner gave in the first step: the document is
-    titled with it when it has no title of its own (a PDF, a Word file)."""
+    """Read the uploaded documents' text and clean it; it waits as a draft for its check.
+    `business` is the name the owner gave in the first step: the text is titled
+    with it when it has no title of its own (a PDF, a Word file)."""
     if not files or len(files) > MAX_FILES:
         raise HTTPException(status_code=422, detail=f"Upload between 1 and {MAX_FILES} documents.")
-    documents, problems = [], []
+    documents, texts, problems = [], [], []
     for upload in files:
         try:
-            documents.append(read(upload.filename or "document", await upload.read()))
+            document = read(upload.filename or "document", await upload.read())
         except Unreadable as reason:
             problems.append(str(reason))
+            continue
+        text, removed = clean(document.text)
+        if removed:
+            problems.append(f"{document.name}: {' and '.join(removed)} removed")
+        documents.append(document)
+        texts.append(text)
     if not documents:
         raise HTTPException(status_code=422, detail=" ".join(problems) or "No document could be read.")
-    text = titled("\n\n".join(document.text for document in documents), business)
-    try:
-        reading = read_services(text)
-    except ModelError as error:
-        log.warning("document reader unavailable: %s", error)
-        raise HTTPException(status_code=503, detail="Reading is unavailable right now. Please try again.")
-    save_draft(text)
+    save_draft(titled("\n\n".join(texts), business))
     return ReadAnswer(documents=[ReadDocument(name=d.name, kind=d.kind, pages=d.pages) for d in documents],
-                      services=[Row(**vars(s)) for s in reading.services], problems=problems + reading.problems)
+                      problems=problems)
+
+
+@router.post("/check")
+def check_draft() -> Checked:
+    """Check the draft for what must not reach customers, and keep what was found."""
+    try:
+        text = draft_text()
+    except FileNotFoundError:
+        raise HTTPException(status_code=409, detail="Upload your documents first.")
+    try:
+        findings = check(text)
+    except ModelError as error:
+        log.warning("safety check unavailable: %s", error)
+        raise HTTPException(status_code=503, detail="The check is unavailable right now. Please try again.")
+    save_check(findings)
+    if findings:
+        log.info("upload blocked: %s", ", ".join(sorted({f["kind"] for f in findings})))
+    return Checked(safe=not findings, findings=[Finding(**f) for f in findings])
+
+
+@router.get("/phone")
+def phone_offer() -> PhoneOffer:
+    """What the page tells the owner before they choose phone support."""
+    return PhoneOffer(available=phone.available(), monthly=phone.MONTHLY, per_minute=phone.PER_MINUTE)
+
+
+@router.get("/preview")
+def preview() -> Preview:
+    """The key the preview page adds the widget with, as the owner's website would.
+    The preview is the live assistant: its bookings are real (D33)."""
+    return Preview(key=get_settings().widget_key)
 
 
 @router.post("/go-live")
 def go_live_route(body: GoLive, request: Request) -> Live:
-    """Save the owner's services table and make the read documents the business's own."""
+    """The checked documents become the business's own, with a phone line if the
+    owner asked: all or nothing, the documents' check first."""
     try:
-        go_live([Service(r.name, r.category, r.minutes, r.price, r.quote) for r in body.services])
+        ready()
+        line = phone.get_line() if body.phone else None
+        go_live(line)
     except FileNotFoundError:
-        raise HTTPException(status_code=409, detail="Read your documents first.")
+        raise HTTPException(status_code=409, detail="Let the check finish first.")
+    except Blocked:
+        raise HTTPException(status_code=409, detail="This document can't go live. Fix it and upload it again.")
+    except phone.LineUnavailable as reason:
+        raise HTTPException(status_code=503, detail=str(reason))
     origin = str(request.base_url).rstrip("/")
     key = get_settings().widget_key
-    return Live(snippet=f'<script src="{origin}/web/widget/chat.js"\n        data-business="{key}" defer></script>')
+    return Live(snippet=f'<script src="{origin}/web/widget/chat.js"\n        data-business="{key}" defer></script>',
+                phone=phone.shown(line.number) if line else None)
 
 
 class Reset(BaseModel):

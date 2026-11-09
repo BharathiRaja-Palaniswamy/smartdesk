@@ -10,8 +10,8 @@ answers from those documents, books, and helps fill cancelled slots.
 
 Two moments the demo must show:
 
-1. **Onboard a business in minutes**: basics and documents in, services table
-   out, assistant live on the business's website.
+1. **Onboard a business in minutes**: basics and documents in, checked safe
+   for customers, assistant live on the business's website.
 2. **Fill the empty chair**: a cancellation becomes an offer to a waitlisted
    customer, who accepts, and the slot is booked.
 
@@ -131,20 +131,25 @@ flowchart TD
   U --> X[3 Extract text per page<br/>Claude for images and scans]
   X --> R[4 Hide personal details]
   R --> S[5 Sections]
-  S --> T[6 Services table<br/>strict schema · normalise · validate]
+  S --> T[Services table, after the demo<br/>strict schema · normalise · validate]
   S --> P[(Pinecone<br/>business's namespace)]
   T --> Q[(Business's database)]
-  T --> E[7 Services page<br/>editable]
+  S --> K[6 Safety check<br/>harmful content · text written to an assistant]
+  K --> E[7 Ready<br/>go live, or what was found and re-upload]
   E --> G[8 Go live<br/>widget key · phone line with owner's yes · calendar]
 ```
 
 - Documents only in v1 (PDF, DOCX, MD, TXT, CSV, images). Call recordings are
   on the roadmap.
-- The services table keeps an exact quote for every value, checked by code;
-  a value the document does not state is left empty, never guessed. A service
-  without a price is listed as "price missing" and is not bookable.
-- The owner sees and can edit the services table; booking uses it. There is
-  no other review step in v1.
+- SmartDesk takes the documents as they are and asks the owner nothing about
+  the business (D31). It removes what a page could run or a reader cannot see,
+  then checks for what must not reach customers: harmful content and text
+  written to an AI assistant. Each finding quotes the document; any finding
+  blocks going live, and the owner fixes the document and uploads it again.
+  While it works, one plain line says what is happening.
+- Booking from any format (after the demo): a services table read from the
+  documents, every value checked by code against the service's own passage;
+  a value the document does not state is left empty, never guessed.
 - **Go live** is the final step: it issues the widget key, sets up the phone
   line (after the owner agrees to its monthly cost; optional) and checks the
   calendar, all or nothing.
@@ -194,8 +199,8 @@ from the customer's words if the AI leaves it out). Owner sees hand-offs in the 
 
 ### E. Changing what the assistant knows
 
-The owner edits or replaces a document and uploads it again; flow A runs for
-that document and replaces what it produced. Services table edits apply at once.
+The owner fixes or replaces a document and uploads it again; flow A runs for
+that document and replaces what it produced, after its safety check.
 
 ## 6. Data: one cell per business
 
@@ -218,7 +223,7 @@ in shared tables. The app resolves the business, then opens only that cell.
 | Documents | same database + `data/businesses/<id>/files/` | originals on disk; name, fingerprint, who authorized it, status |
 | Sections | same database | redacted text of each section with its document and page; the source of what is indexed |
 | Search index | Pinecone namespace `<id>` | one entry per section, tagged with its document |
-| Services table | same database | service, options (duration, price), staff, the quote behind each value, edited-by-owner flag |
+| Services table | same database | service, options (duration, price), staff, the quote behind each value (after the demo) |
 | Waitlist, offers | same database | customer, service, time window, consent; slot, sent, expires, outcome |
 | Hand-offs, feedback, unanswered questions | same database | |
 | Secrets | secret store, per business | calendar credentials, phone and voice-agent ids |
@@ -367,7 +372,7 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | M4 | Onboarding storage: businesses, documents, sections, services table; reset onboarding, delete business, seed a test business | ✅ |
 | M5 | Document intake: upload checks, readers (pdfplumber, python-docx, Claude for images and scans), redaction, sections, Pinecone namespace, re-upload replaces | ✅ |
 | M6 | Services reader: strict schema, normalising, validation, quotes; parser benchmark; per-field and abstention evals | ✅ |
-| M7 | Onboarding screens on the backend: per-document progress, editable services table; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing); **admin console, first version**: list with status, channels, documents and services counts, pause and resume, retry | ✅ |
+| M7 | Onboarding screens on the backend: per-document progress, the safety check; **go live** (widget key, phone line with the owner's yes, calendar; all or nothing); **admin console, first version**: list with status, channels, documents and services counts, pause and resume, retry | ✅ |
 | M8 | Widget on the backend: chat through the SmartDesk API; key and domain check | ✅ |
 | M9 | Waitlist and `join_waitlist` | ✅ |
 | M10 | Slot recovery: matching, offers, expiry, `answer_offer` | ✅ |
@@ -399,6 +404,11 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | D26 | Simulator safety | the real tools · a sandbox | **Decided: sandbox**: sandbox calendar, session-only hand-offs and cards, test customers only, settable clock, traces tagged `simulator`, a cost limit per session |
 | D27 | Admin use of the simulator | free · support access | **Decided: support access**: a reason, time-limited, logged, shown to the owner |
 | D28 | Order of the console and simulator | after cells · previews first | **Decided: previews first**: M0, then the console preview and simulator v0 (M1), then cells (M2) make both real |
+| D29 | ~~What the owner does with the services table~~ (replaced by D31) | edit it on screen · confirm it or re-upload the document | **Decided: confirm or re-upload**: the summary is read-only; the server keeps its own reading and saves exactly that on confirm; a wrong value is fixed in the document, which stays the one source |
+| D30 | ~~How onboarding reads~~ (replaced by D31) | one silent call · stages shown as they run, with questions for the owner | **Decided: stages with questions** (business, services, policies, anything unclear); answers saved as "Owner's answers"; a workflow, not an agent; booking from any format follows after the demo |
+| D31 | What onboarding does with the documents | summarise and ask the owner to confirm and answer questions · take them as they are and check only that they are safe | **Decided: as they are, safety only**: clean what a page could run (code), then one model call per part for harmful content and text written to an assistant, plus code phrases; findings must quote the document; any finding blocks going live (the server refuses), owner re-uploads; generic progress lines; no questions about the business |
+| D32 | Phone support at onboarding | buy a Twilio number per business now · demo mode now, buying after; numbers in the owner's Twilio account · in SmartDesk's, a subaccount per business | **Decided: demo mode now** (the number SMARTDESK_PHONE_NUMBER names, nothing bought; the cost shown and agreed to as it will be), **SmartDesk's Twilio account with a subaccount per business** after the demo; the owner keeps their number and forwards calls to the line |
+| D33 | The owner's preview after going live | the simulator's sandbox (D26) · the live assistant | **Decided: the live assistant for the demo**: `/web/preview.html` shows the business's name with its widget added as its snippet adds it; each tab is a new customer, so the empty chair can be tried with two tabs; bookings are real and the page says so. The simulator's sandbox (D26) stays for admin and later owner use |
 | D18 | Calendars in v1 | Google Calendar only · booking-system connectors (Square, Fresha, Vagaro, Mindbody) | **Decided: Google Calendar only**, one calendar per staff member, behind the existing calendar interface (`booking/calendars/base.py`) so a connector is a new file, not a rewrite |
 | D15 | Onboarding v1 scope | Full owner review with an Onboarding agent · documents straight to search with an editable services table | **Decided: documents straight to search; services table shown and editable; no recordings** |
 

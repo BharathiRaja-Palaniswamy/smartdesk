@@ -23,7 +23,11 @@ A new situation should fit one of these, not add a rule of its own.
   3. Nothing changes without a yes to exactly what will happen.
      Code writes each question: the details read back, the plan found, the
      bookings to cancel (or what a change cancels and books). A yes that also
-     changes or questions it (YES, BUT) is not a yes. (yes.py)
+     changes or questions it (YES, BUT) is not a yes. What was done is told
+     from what code did: a reply saying something was booked, changed or
+     cancelled (CLAIMS_DONE) when nothing was this turn is not sent; the agent
+     is asked again (NOT_DONE), and a second time the staff take over.
+     (yes.py, flow.py)
 
   4. A booking is all or nothing, and never twice.
      A plan is re-checked at the yes and booked whole or not at all; a change
@@ -78,6 +82,19 @@ YES = re.compile(r"^\s*(y|yes|yeah|yep|yup|sure|ok|okay|confirm(ed)?|please do|g
                  r"correct|that'?s right)\b", re.IGNORECASE)
 # ...unless it goes on to change or question it: "yes, but at 4pm instead?" is not a yes.
 BUT = re.compile(r"\b(but|instead|change|different|another|not|don'?t)\b|\?", re.IGNORECASE)
+
+# A reply saying the customer's booking was made, changed or cancelled. Not "Shall I book…?",
+# and not "4 pm is booked" (a time taken): only what was done for them.
+CLAIMS_DONE = re.compile(
+    r"\b(you'?re (all )?(set|booked|confirmed)"
+    r"|(i|we)( have|'ve)( now| just)? (booked|cancell?ed|rescheduled|moved|changed|confirmed)"
+    r"|(has|have) (now )?been (booked|cancell?ed|rescheduled|moved|changed|confirmed)"
+    r"|(booking|appointment|reservation) is (now )?(confirmed|booked|cancell?ed))\b",
+    re.IGNORECASE)
+# Told to the agent, once, when its reply said so and nothing was done.
+NOT_DONE = ("Nothing has been booked, changed or cancelled in this conversation turn. Never tell the customer "
+            "something was done unless a tool result shows it. To book, change or cancel, send the request "
+            "with the booking tool; the customer is then asked to confirm.")
 
 # ---- 5: bounds, past which a person takes over --------------------------------------------------
 

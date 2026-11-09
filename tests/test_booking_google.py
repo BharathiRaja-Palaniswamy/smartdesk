@@ -115,23 +115,25 @@ def moment(when: dict) -> datetime:
     return datetime.combine(date.fromisoformat(when["date"]), datetime.min.time(), SPA)
 
 
-TEAM = list(read_schedule(get_knowledge()).staff_members)
+def team() -> list[str]:
+    """The test business's staff, read when a test runs (its own business folder, conftest.py)."""
+    return list(read_schedule(get_knowledge()).staff_members)
 
 
 @pytest.fixture
 def api():
-    return FakeApi({calendar_name("Test Studio", name): f"cal-{n}" for n, name in enumerate(TEAM)})
+    return FakeApi({calendar_name("Test Studio", name): f"cal-{n}" for n, name in enumerate(team())})
 
 
 @pytest.fixture
 def desk(api):
-    calendar = GoogleCalendar(api, {name: f"cal-{n}" for n, name in enumerate(TEAM)}, SPA)
+    calendar = GoogleCalendar(api, {name: f"cal-{n}" for n, name in enumerate(team())}, SPA)
     return Appointments(read_schedule(get_knowledge()), calendar, SPA, 30,
                         now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
 
 
 def dev(api):
-    return api.stored[f"cal-{TEAM.index('Dev Patel')}"]
+    return api.stored[f"cal-{team().index('Dev Patel')}"]
 
 
 def test_a_booking_becomes_an_event_on_the_staff_members_own_calendar(api, desk):

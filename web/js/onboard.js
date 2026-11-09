@@ -1,12 +1,11 @@
 /* Onboarding: what the owner has told us so far, and moving between steps.
-   Each step has its own file (business.js, upload.js, services.js, complete.js);
-   they share this one object, SD. Nothing leaves the browser yet. */
+   Each step has its own file (business.js, upload.js, ready.js, phone.js, complete.js);
+   they share this one object, SD. The documents are read and checked on the server (ready.js). */
 
 const SD = {
-  steps: ["business", "upload", "services", "complete"],
+  steps: ["business", "upload", "ready", "calls", "complete"],
   business: {},   // step 1's answers
   files: [],      // step 2's accepted files: { file, kind }
-  services: [],   // step 3's table, as the owner saved it
   enter: {},      // step name -> function run when that step opens
 
   /** Show one step and mark the stepper. */

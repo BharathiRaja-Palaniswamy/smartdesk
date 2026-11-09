@@ -28,12 +28,14 @@ conversations are (flow.py).
 
 import threading
 
-_guard = threading.Lock()  # protects the three dictionaries below
+_guard = threading.Lock()  # protects the dictionaries and set below
 _locks: dict[str, threading.Lock] = {}  # conversation -> its one-at-a-time lock
 _newest: dict[str, int] = {}  # conversation -> the number of the newest turn that arrived
 # conversation -> the saved step the next turn starts from (None: start the conversation afresh)
 _restore: dict[str, str | None] = {}
 KEEP = object()  # take_restore()'s answer when nothing needs undoing
+# conversations whose replaced turn made or cancelled a booking the customer has not been told of
+_untold: set[str] = set()
 _answered = threading.Condition()  # signalled whenever a turn's reply is ready
 _answers: dict[str, tuple[int, object]] = {}  # conversation -> (turn number, its reply), the newest so far
 
@@ -70,6 +72,22 @@ def take_restore(thread: str) -> object:
     """The step the next turn should start from, or KEEP when nothing needs undoing."""
     with _guard:
         return _restore.pop(thread, KEEP)
+
+
+def untold(thread: str) -> None:
+    """A replaced turn of `thread` made or cancelled a booking: its reply was never
+    shown, so the next turn may tell the customer it was done (rules.py, 3)."""
+    with _guard:
+        _untold.add(thread)
+
+
+def take_untold(thread: str) -> bool:
+    """Whether the next turn has a replaced turn's booking to tell of."""
+    with _guard:
+        if thread in _untold:
+            _untold.remove(thread)
+            return True
+        return False
 
 
 def answered(thread: str, number: int, reply: object) -> None:

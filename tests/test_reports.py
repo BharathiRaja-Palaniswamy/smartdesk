@@ -14,9 +14,9 @@ from smartdesk.config import get_settings
 from smartdesk.reports.dataset import Dataset, load
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def dataset():
-    """The real bookings file joined to the real business document, loaded once."""
+    """The real bookings file joined to the real business document, loaded in the test's own business folder (conftest.py)."""
     return load(get_settings().report_data_path)
 
 

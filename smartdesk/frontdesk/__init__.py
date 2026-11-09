@@ -46,7 +46,9 @@ from .turns import (
     newer_reply,
     replaced,
     take_restore,
+    take_untold,
     undo_later,
+    untold,
 )
 from .yes import CHOICES
 
@@ -111,7 +113,7 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
                 {"messages": [HumanMessage(time_note()), HumanMessage(message)], "channel": channel,
                  "caller": caller, "rounds": 0, "asked": [], "repeats": 0, "say": "", "suggestions": [],
                  "reply": None,
-                 "confirming": False, "acted": False},
+                 "confirming": False, "acted": False, "untrue": False, "untold": take_untold(thread)},
                 config=config)
         except Exception:
             # A step failed part way (e.g. a model could not be reached),
@@ -122,9 +124,12 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
                 undo_later(thread, before)
             raise
         if replaced(thread, number):
-            # Forget this turn, unless it made or cancelled a booking: that happened.
+            # Forget this turn, unless it made or cancelled a booking: that happened,
+            # and the next turn may tell the customer so.
             if not state.get("acted"):
                 undo_later(thread, before)
+            else:
+                untold(thread)
             return None
     if state["confirming"]:
         return Turn(state["say"], suggestions=CHOICES[state["pending"]["kind"]], confirming=True)

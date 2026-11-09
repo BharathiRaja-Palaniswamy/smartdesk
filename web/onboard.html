@@ -26,8 +26,9 @@
   <ol class="stepper" aria-label="Setup steps">
     <li data-for="business">1. Your business</li>
     <li data-for="upload">2. Documents</li>
-    <li data-for="services">3. Services</li>
-    <li data-for="complete">4. Done</li>
+    <li data-for="ready">3. Check</li>
+    <li data-for="calls">4. Phone</li>
+    <li data-for="complete">5. Done</li>
   </ol>
 
   <!-- Step 1: tell us about your business -->
@@ -87,7 +88,7 @@
   <!-- Step 2: upload documents -->
   <section class="step" id="upload">
     <h1>Add your documents</h1>
-    <p class="muted">Price lists, service menus, policies and FAQs. Your assistant answers from these, and books from the services table SmartDesk builds from them.</p>
+    <p class="muted">Price lists, service menus, policies and FAQs. Your assistant answers and books from these.</p>
     <label class="drop" id="drop" for="file-input">
       <strong>Drop files here or click to choose</strong>
       <span class="muted">PDF, Word, Markdown, text, CSV · up to 50 MB each</span>
@@ -106,41 +107,77 @@
     </div>
   </section>
 
-  <!-- Step 3: each document's progress, then the services table to check -->
-  <section class="step" id="services">
-    <h1>Your services</h1>
-    <p class="muted">SmartDesk is reading your documents. Your assistant answers questions from them, and books from this table: check the prices and lengths, and fix anything wrong. Hover over "Your document" to see the words a row came from.</p>
-    <ul class="progress" id="progress"></ul>
-    <div id="services-ready" hidden>
-      <table class="services">
-        <thead>
-          <tr><th>Service</th><th>Duration (min)</th><th>Price ($)</th><th>From</th><th><span class="visually-hidden">Remove</span></th></tr>
-        </thead>
-        <tbody id="services-rows"></tbody>
-      </table>
-      <button class="link" type="button" id="add-service">+ Add a service</button>
-      <p class="hint">A service without a length or price can't be booked until you add one.</p>
-      <ul class="read-problems" id="services-problems" aria-label="What could not be read"></ul>
-      <p class="error" id="services-error" role="alert"></p>
-      <div class="actions">
-        <button class="btn ghost" type="button" data-back>Back</button>
-        <button class="btn" type="button" id="services-next">Save and finish</button>
-      </div>
+  <!-- Step 3: SmartDesk reads the documents as they are and checks they are safe (D31) -->
+  <section class="step" id="ready">
+    <h1 id="ready-title">Getting your assistant ready</h1>
+    <p class="muted" id="ready-intro">This takes a few seconds.</p>
+    <p class="status working" id="status" role="status"><span class="spinner" aria-hidden="true"></span><span id="status-text"></span></p>
+    <ul class="read-problems" id="problems"></ul>
+    <section class="card flagged" id="flagged" hidden>
+      <h3>What we found</h3>
+      <p class="muted">Your assistant can't share these with customers. Remove them from your document, then upload it again.</p>
+      <ul class="findings" id="findings"></ul>
+    </section>
+    <p class="error" id="ready-error" role="alert"></p>
+    <div class="actions" id="ready-actions" hidden>
+      <button class="btn ghost" type="button" data-back>Upload again</button>
+      <button class="btn" type="button" id="proceed" disabled>Proceed</button>
     </div>
   </section>
 
-  <!-- Step 4: onboarding complete -->
+  <!-- Step 4: phone support, if the owner wants calls answered too (D32) -->
+  <section class="step" id="calls">
+    <h1>Answer phone calls too?</h1>
+    <p class="muted">Your assistant can answer calls the way it answers chats: questions, bookings and changes.</p>
+    <div class="choices" role="radiogroup" aria-label="Phone support">
+      <label class="choice">
+        <input type="radio" name="phone" value="yes">
+        <span><strong>Yes, add phone support</strong>
+          <span class="muted">You get a phone number for your assistant. Keep your own number and forward calls to it.</span></span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="phone" value="no" checked>
+        <span><strong>No, just the website chat</strong>
+          <span class="muted">You can add phone support later.</span></span>
+      </label>
+    </div>
+    <section class="card cost" id="phone-cost" hidden>
+      <h3>What it costs</h3>
+      <p id="phone-price"></p>
+      <label class="consent"><input type="checkbox" id="agree-cost"> <span>I agree to this cost for my phone line.</span></label>
+    </section>
+    <p class="hint" id="phone-unavailable" hidden>Phone support isn't available right now. You can add it later.</p>
+    <p class="error" id="phone-error" role="alert"></p>
+    <div class="actions">
+      <span></span>
+      <button class="btn" type="button" id="go-live">Go live</button>
+    </div>
+  </section>
+
+  <!-- Step 5: onboarding complete -->
   <section class="step" id="complete">
     <p class="done-mark" aria-hidden="true">✓</p>
     <h1 id="done-title">You're set up</h1>
-    <p class="muted">Your assistant answers from your documents and books from your services table. Add it to your website, or <a href="/web/demo/sample-business.html" target="_blank" rel="noopener">try it on a sample page</a>.</p>
+    <p class="muted">Your assistant answers and books from your documents.</p>
+    <a class="btn" href="/web/preview.html" target="_blank" rel="noopener">See it on your website</a>
+    <p class="hint">A preview of your website with the chat added, as your customers will see it. Open a second customer there to try the empty chair.</p>
     <h3>Add the chat to your website</h3>
     <p class="muted">Paste this just before <code>&lt;/body&gt;</code> on your site.</p>
     <pre class="snippet" id="snippet"></pre>
     <button class="btn ghost" type="button" id="copy">Copy snippet</button>
+    <section id="phone-done" hidden>
+      <h3 style="margin-top:28px">Your phone line</h3>
+      <p class="phone-number" id="phone-number"></p>
+      <p class="muted">Calls to this number are answered by your assistant. Keep your own business number and forward calls to this one:</p>
+      <ul class="next muted">
+        <li><strong>All calls:</strong> on many US carriers, dial *72 and then this number; *73 turns it off.</li>
+        <li><strong>Only calls you miss, or when you're busy:</strong> ask your phone provider for conditional forwarding. Codes differ by provider.</li>
+        <li>Callers usually still show their own number, so your assistant can find their bookings.</li>
+      </ul>
+    </section>
     <h3 style="margin-top:28px">Next</h3>
     <ul class="next muted">
-      <li>Connect your phone line so calls are answered too</li>
+      <li id="next-phone">Add phone support any time, so calls are answered too</li>
       <li>Connect your booking calendar</li>
       <li>Update a document any time: upload it again and it replaces the old version</li>
     </ul>
@@ -150,7 +187,7 @@
     <div class="danger" id="danger">
       <p class="label">Development only</p>
       <h3>Reset onboarding</h3>
-      <p class="muted">Forgets the documents and services table you just set up, so you can onboard again. Customers' bookings are kept. It can't be undone.</p>
+      <p class="muted">Forgets the documents you just set up, so you can onboard again. Customers' bookings are kept. It can't be undone.</p>
       <div class="danger-actions">
         <button class="btn ghost danger-btn" type="button" id="reset-start">Reset onboarding</button>
       </div>
@@ -174,7 +211,8 @@
 <script src="js/onboard.js"></script>
 <script src="js/business.js"></script>
 <script src="js/upload.js"></script>
-<script src="js/services.js"></script>
+<script src="js/ready.js"></script>
+<script src="js/phone.js"></script>
 <script src="js/complete.js"></script>
 <script src="js/reset.js"></script>
 </body>

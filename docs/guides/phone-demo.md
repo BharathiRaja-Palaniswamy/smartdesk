@@ -47,7 +47,13 @@ keeps working):
    dashboard, or from the manage page's phone-line test with
    `SMARTDESK_VOICE_AGENT_ID` set to this agent's id).
 
-## 4. Check
+## 4. Offer it in onboarding
+
+Start SmartDesk with `SMARTDESK_PHONE_NUMBER` set to that Twilio number, written
+"+14155550123". Onboarding's phone step then offers phone support and gives
+this line (D32); without it, the step offers only the website chat.
+
+## 5. Check
 
 Call the number and ask "What time do you open on Sunday?", then book a
 service. The calls appear in SmartDesk's log as `POST /v1/chat/completions`;

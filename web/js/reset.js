@@ -1,6 +1,6 @@
 /* Reset onboarding (development only): start over, after typing the
-   business's name. The server forgets the onboarded document and services
-   table (POST /api/onboarding/reset) and says what it removed; each is shown
+   business's name. The server forgets the onboarded document and any upload
+   not yet live (POST /api/onboarding/reset) and says what it removed; each is shown
    as done, and the owner goes back to the documents step, basics kept.
    Rules in docs/workflows/go-live.md, part C. */
 
@@ -63,7 +63,6 @@
     setTimeout(() => {
       show("idle");
       SD.files = [];
-      SD.services = [];
       SD.go("upload");
     }, 1500);
   });

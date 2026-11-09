@@ -54,8 +54,14 @@ os.environ["SMARTDESK_EVAL_SET"] = str(FIXTURES / "golden.json")
 def own_business_folder(tmp_path, monkeypatch):
     """Every test keeps the business's files (onboarded document, waitlist,
     offers) in an empty temporary folder: a business onboarded on this machine
-    never reaches a test, and a test never writes into the project."""
+    never reaches a test, and a test never writes into the project. The parsed
+    document is forgotten before and after, so none is carried between folders."""
+    from smartdesk.business.store import get_knowledge
+
     monkeypatch.setenv("SMARTDESK_BUSINESS_FOLDER", str(tmp_path / "business"))
+    get_knowledge.cache_clear()
+    yield
+    get_knowledge.cache_clear()
 
 
 @pytest.fixture(autouse=True)

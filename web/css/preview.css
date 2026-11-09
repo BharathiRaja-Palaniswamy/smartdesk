@@ -1,0 +1,28 @@
+/* The owner's preview: a plain stand-in website, with its own styles, under a
+   bar that says it is a preview. The widget draws itself in a Shadow DOM, so
+   none of this reaches it. */
+
+body { margin: 0; font-family: Georgia, serif; background: #f6f3ee; color: #2d2a26; }
+
+.preview-bar {
+  position: sticky; top: 0; z-index: 1; margin: 0;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 10px 16px; background: #fff3cd; border-bottom: 1px solid #ecd9a0;
+  font-family: system-ui, sans-serif; font-size: 14px;
+}
+.preview-bar button {
+  font: inherit; font-weight: 600; padding: 6px 12px; border-radius: 8px;
+  border: 1px solid #b08a2e; background: #fff; color: #5c4510; cursor: pointer;
+}
+.preview-bar button:hover { background: #fdf6e3; }
+
+.site-hero { padding: 64px 16px; text-align: center; background: #dfe8e1; }
+.site-kicker { margin: 0 0 6px; font-family: system-ui, sans-serif; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #5d6b61; }
+.site-hero h1 { font-size: clamp(32px, 6vw, 46px); margin: 0 0 8px; }
+.site-hero p { margin: 0; font-size: 18px; }
+
+.site-body { max-width: 720px; margin: 0 auto; padding: 32px 16px 140px; font-size: 18px; line-height: 1.6; }
+.try { background: #fff; border: 1px solid #e3ddd2; border-radius: 12px; padding: 20px 24px; font-family: system-ui, sans-serif; font-size: 16px; }
+.try h2 { margin: 0 0 8px; font-size: 18px; }
+.try ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.error { color: #a3302a; font-family: system-ui, sans-serif; font-size: 15px; }

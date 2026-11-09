@@ -67,8 +67,8 @@ start it with `--port 8002`:
 | Page | What it shows |
 |---|---|
 | `/web/` | the landing page |
-| `/web/onboard.html` | onboarding: basics, documents (read for real), services table, go live |
-| `/web/demo/sample-business.html` | a business's website with the chat widget (the real agent) |
+| `/web/onboard.html` | onboarding: basics, documents (read and safety-checked for real), phone, go live |
+| `/web/preview.html` | the owner's website preview with the chat widget (the live agent; bookings are real) |
 | `/web/admin.html` | the admin console preview (sample businesses) |
 | `/manage` | the owner's console |
 

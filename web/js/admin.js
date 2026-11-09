@@ -53,8 +53,8 @@
     retry.disabled = b.status !== "failed";
     retry.title = b.failure || "";
     const simulate = el("a", "Simulate", "link");
-    simulate.href = "demo/sample-business.html";
-    simulate.title = "A chat with this business's real agent, in a sandbox (support access: logged)";
+    simulate.href = "preview.html";
+    simulate.title = "This business's website preview, with its live assistant (bookings are real)";
     const traces = el("a", "Traces", "link");
     traces.href = "#";
     traces.title = "This business's LangSmith project";

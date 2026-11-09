@@ -1,8 +1,8 @@
 # Agent spec: Onboarding
 
 From `docs/templates/AGENT.md`. Status: **roadmap, not in v1.** In v1,
-documents go straight to search and the owner edits only the services table
-(`docs/workflows/onboarding.md`). This draft is kept for when owner review
+documents go straight to search after a safety check, and the owner is asked
+nothing about the business (D31, `docs/workflows/onboarding.md`). This draft is kept for when owner review
 and call recordings are added; it assumes a scan step (odd values, gaps,
 conflicts) that v1 does not have.
 

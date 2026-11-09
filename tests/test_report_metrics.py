@@ -15,9 +15,9 @@ from smartdesk.reports.dataset import load
 from smartdesk.reports.metrics import channels, customers, feedback, period, services, summary, trend
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def dataset():
-    """The real bookings joined to the business document: metrics look service names up in it."""
+    """The real bookings joined to the business document: metrics look service names up in it, loaded in the test's own business folder (conftest.py)."""
     return load(get_settings().report_data_path)
 
 

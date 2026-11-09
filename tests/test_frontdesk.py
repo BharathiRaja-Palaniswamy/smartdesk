@@ -701,8 +701,8 @@ def test_a_list_written_into_the_answer_is_shown_once_under_it(desk, monkeypatch
 
 def test_markdown_never_reaches_the_customer(desk, monkeypatch):
     identified(monkeypatch, "thread-md")
-    chat(monkeypatch, says("Your appointment is confirmed!\n- **Lip Wax** with **Fay Kim**\n- **Time**: 14:00"))
-    assert respond("thread-md", "thanks").answer == ("Your appointment is confirmed!\nLip Wax with Fay Kim\n"
+    chat(monkeypatch, says("Your upcoming appointment:\n- **Lip Wax** with **Fay Kim**\n- **Time**: 14:00"))
+    assert respond("thread-md", "thanks").answer == ("Your upcoming appointment:\nLip Wax with Fay Kim\n"
                                                      "Time: 14:00")
 
 
@@ -870,3 +870,55 @@ def test_the_read_back_says_the_time_once():
     question = details_question({"services": ["Swedish Massage"], "day": "2026-10-30", "before": "12:00",
                                  "staff_member": "Dev Patel"}, {"day": "this Friday morning", "time": "morning"})
     assert question.count("morning") == 1 and "Friday 30 October" in question
+
+
+
+# ---- what was done is told from what code did (rules.py, 3) ----------------------------------
+
+SAID_BOOKED = ("You're all set! We've booked your Prenatal Massage with Dev Patel on Friday at 16:00. "
+               "We'll send a confirmation to your phone.")
+
+
+def test_a_booking_the_agent_only_says_it_made_is_never_told_to_the_customer(desk, monkeypatch):
+    # As seen live: the customer gave a time ("16") and the agent replied that it was booked,
+    # with no booking request and no yes; the slot was then booked by another customer.
+    identified(monkeypatch, "thread-claim")
+    sent = chat(monkeypatch, says(SAID_BOOKED), says("Shall I look for times on Friday at 16:00 for you?"))
+    turn = respond("thread-claim", "16")
+    assert turn.answer == "Shall I look for times on Friday at 16:00 for you?"
+    assert "Nothing has been booked" in sent[-1][-1].content  # the agent was told, once
+    assert desk.day_bookings(FRIDAY) == []
+
+
+def test_said_twice_the_staff_take_over(desk, monkeypatch, tmp_path):
+    identified(monkeypatch, "thread-claim-twice")
+    chat(monkeypatch, says(SAID_BOOKED), says(SAID_BOOKED))
+    assert respond("thread-claim-twice", "16").answer == HANDOVER
+    assert json.loads((tmp_path / "handoffs.jsonl").read_text())["name"] == "Asha Rao"
+
+
+@pytest.mark.parametrize("reply, claims", [
+    ("You're all set! We've booked your massage.", True),
+    ("Your booking is confirmed for Friday.", True),
+    ("I've cancelled your facial.", True),
+    ("Your appointment has been moved to 3 pm.", True),
+    ("Shall I book Prenatal Massage at 16:00?", False),
+    ("Sorry, 4 pm is booked. 5 pm is free.", False),
+    ("Once you confirm, you're booked.", True),  # careful wording is the agent's job: asked again, no harm
+])
+def test_what_counts_as_saying_something_was_done(reply, claims):
+    from smartdesk.frontdesk.rules import CLAIMS_DONE
+
+    assert bool(CLAIMS_DONE.search(reply)) is claims
+
+
+def test_after_a_real_booking_this_turn_the_agent_may_say_so():
+    from smartdesk.frontdesk.flow import _done_this_turn
+
+    accepted = ToolMessage(json.dumps({"booked": [{"reference": "BK-1"}]}), tool_call_id="call-1")
+    said_yes = ToolMessage(json.dumps({"customer_said_yes_to": "Shall I…", "result": {"cancelled": ["BK-2"]}}),
+                           tool_call_id="call-2")
+    earlier = [HumanMessage("book it"), accepted, HumanMessage("thanks")]
+    assert _done_this_turn([HumanMessage("yes"), accepted])
+    assert _done_this_turn([HumanMessage("yes"), said_yes])
+    assert not _done_this_turn(earlier)  # booked in an earlier turn, not this one

@@ -7,7 +7,7 @@ From `docs/templates/WORKFLOW.md`, adapted for a tool. Status: **draft for revie
 | | |
 |---|---|
 | **Job, in one sentence** | Lets a person chat with one business's real Front Desk agent and watch every step, without touching that business's customers, calendar or staff. |
-| **Used by** | SmartDesk admin, for any business (from the admin console's **Simulate** link); the business owner, for their own business ("Preview your assistant" before go-live) |
+| **Used by** | SmartDesk admin, for any business (from the admin console's **Simulate** link); the business owner, for their own business ("Preview your assistant" before go-live). Demo build: the owner's preview is the live assistant, not this sandbox (D33, `web/preview.html`) |
 | **Real** | the model, the prompt, the business's search and services table, the agent's rules and tools |
 | **Never real** | bookings on the live calendar, hand-offs to staff, feedback cards, real customers |
 | **Out of scope** | load testing; replaying live conversations (later) |

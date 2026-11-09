@@ -9,7 +9,7 @@ done · not touched by this change · not built yet.
 | # | Anti-pattern | In SmartDesk, the push must keep… | Check |
 |---|---|---|---|
 | 1 | **No rate limits** | limits per business and per customer on chat, phone, uploads and owner routes | review; auto once M2 adds limit tests |
-| 2 | **No input / output validation** | uploads checked by real type, size and pages; tool arguments and AI output checked against schemas (Pydantic, strict); services-table values backed by an exact quote; replies set as text, never HTML | auto: tests · review |
+| 2 | **No input / output validation** | uploads checked by real type, size and pages; tool arguments and AI output checked against schemas (Pydantic, strict); uploads cleaned and safety-checked, each finding backed by a quote; replies set as text, never HTML | auto: tests · review |
 | 3 | **No monitoring or logging** | every agent, tool and workflow step traced (LangSmith) and emitting debug events; personal details hidden in both; live review rules unchanged | review |
 | 4 | **Secrets in code or prompts** | no keys, tokens or passwords in the repo, prompts, logs or traces; `.env` never committed; secrets only from the environment | auto: secret scan of the diff · review |
 | 5 | **Unlimited tool access** | each agent gets only its spec's tools, bound to the business and customer; no tool runs AI-written queries, approves, or spends money | auto: spec-vs-code tool test · review |
@@ -17,7 +17,7 @@ done · not touched by this change · not built yet.
 | 7 | **No fallbacks or timeouts** | every model, calendar, Pinecone, speech and Twilio call has a timeout; on failure the person gets a clear message or a hand-off, never a silent stop | auto: failure tests · review |
 | 8 | **No access controls / least privilege** | owner routes need sign-in; business id comes from the session or widget key, never the message; each credential has the narrowest scope; reset is owner-only with typed confirmation | auto: isolation tests · review |
 | 9 | **Ignoring cost and token usage** | turn and tool-call limits; per-business daily budget; file and page limits; cost per eval run reported | review; auto once budgets exist |
-| 10 | **No human in the loop (when needed)** | booking changes need the customer's yes; hand-off to staff when unsure; the owner can see and edit the services table; live chats sampled for review | review |
+| 10 | **No human in the loop (when needed)** | booking changes need the customer's yes; hand-off to staff when unsure; an upload the safety check flags is blocked until the owner fixes it; live chats sampled for review | review |
 
 ## Also before every push
 

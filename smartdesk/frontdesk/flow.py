@@ -65,7 +65,7 @@ from .agent import (
     read_details,
     valid_phone,
 )
-from .rules import MAX_REPEATS, MAX_TOOL_ROUNDS, AGENT_MODEL
+from .rules import CLAIMS_DONE, MAX_REPEATS, MAX_TOOL_ROUNDS, NOT_DONE, AGENT_MODEL
 from .staff import HANDOVER, record_handoff
 from .yes import cancel_question, details_question, done_message, is_yes, plan_question
 
@@ -112,6 +112,8 @@ class AgentState(TypedDict, total=False):
     suggestions: list[str]  # replies to tap offered with `say` this turn (the starters, after the details)
     confirming: bool  # this turn ends by asking the customer to confirm
     acted: bool  # this turn made or cancelled a booking (the customer said yes)
+    untrue: bool  # this turn the agent twice said something was done that was not: the staff take over
+    untold: bool  # a replaced turn before this one made or cancelled a booking the customer was not told of
 
 
 def _latest(state: AgentState) -> HumanMessage:
@@ -206,13 +208,43 @@ def _offered(state: AgentState) -> list:
     return agent_tools(state["name"], state["phone"], words=customer_words(state["messages"]))
 
 
+def _done_this_turn(messages: list) -> bool:
+    """Whether a tool booked, changed or cancelled something since the customer's latest message."""
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            return False
+        if isinstance(message, ToolMessage):
+            try:
+                result = json.loads(message.content)
+            except ValueError:
+                continue
+            result = result.get("result", result) if isinstance(result, dict) else {}  # a yes's result (decide)
+            if isinstance(result, dict) and (result.get("booked") or result.get("cancelled")):
+                return True
+    return False
+
+
+def _untrue(answer, state: AgentState) -> bool:
+    """Whether the reply says something was done that no tool did this turn, nor a
+    replaced turn the customer never saw the reply of (rules.py, 3)."""
+    return (answer.reply is not None and not answer.tool_calls and bool(CLAIMS_DONE.search(answer.reply.answer))
+            and not _done_this_turn(state["messages"]) and not state.get("untold"))
+
+
 def agent(state: AgentState) -> dict:
-    """One model call with the whole conversation: it ends in a reply or in tool requests."""
+    """One model call with the whole conversation: it ends in a reply or in tool requests.
+    A reply saying something was done that was not is never sent (rules.py, 3)."""
     offered = _offered(state)
     rules = instructions(state["name"], state["phone"], state.get("channel", "chat"))
     messages = [SystemMessage(rules), *state["messages"]]
     # After a repeated request, the model must answer now: asked again with tools, it tends to repeat again.
     answer = structured(AGENT_MODEL, messages, AgentReply, offered, answer_now=state.get("repeats", 0) > 0)
+    if _untrue(answer, state):
+        note("The yes", "Front Desk", "said something was done that was not: asked again", answer.reply.answer)
+        answer = structured(AGENT_MODEL, [*messages, SystemMessage(NOT_DONE)], AgentReply, offered)
+        if _untrue(answer, state):
+            note("The yes", "Handoff", "said it again: the staff take over", answer.reply.answer)
+            return {"requests": [], "reply": None, "untrue": True}
     if answer.tool_calls:
         for call in answer.tool_calls:
             note("Front Desk", call["name"], brief(call["args"]), call["args"])
@@ -228,7 +260,10 @@ def agent(state: AgentState) -> dict:
 
 
 def after_agent(state: AgentState) -> str:
-    """The end when the model replied; the tools when it asked for some and has rounds left."""
+    """The end when the model replied; the tools when it asked for some and has rounds left;
+    the staff when it kept saying something was done that was not."""
+    if state.get("untrue"):
+        return "give_up"
     if state.get("reply") is not None or not state.get("requests"):
         return END
     return "tools" if state.get("rounds", 0) < MAX_TOOL_ROUNDS else "give_up"
