@@ -36,7 +36,7 @@ from ..replies import MAX_SUGGESTIONS, ReplyItem
 from .debug import steps
 from .flow import get_graph
 from .agent import answer_text, time_note
-from .rules import WAIT_FOR_NEWER
+from .rules import WAIT_FOR_NEWER, plain_quotes
 from .staff import HANDOVER, record_handoff
 from .turns import (
     KEEP,
@@ -110,7 +110,7 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
         # The message goes in after a note of the time it was sent (agent.time_note).
         try:
             state = graph.invoke(
-                {"messages": [HumanMessage(time_note()), HumanMessage(message)], "channel": channel,
+                {"messages": [HumanMessage(time_note()), HumanMessage(plain_quotes(message))], "channel": channel,
                  "caller": caller, "rounds": 0, "asked": [], "repeats": 0, "say": "", "suggestions": [],
                  "reply": None,
                  "confirming": False, "acted": False, "untrue": False, "untold": take_untold(thread)},

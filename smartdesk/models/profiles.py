@@ -43,6 +43,7 @@ DEFAULT_PROVIDER = "anthropic"
 PROFILES: dict[str, str] = {
     "chat-default": "high",  # the owner chat (smartdesk/owner/)
     "booking-agent": "high",  # the Front Desk agent that talks to customers (smartdesk/frontdesk/)
+    "document-reader": "high",  # reads services, team and hours from a document in any layout (onboarding/booking.py)
     "safety-check": "high",  # checks an uploaded document for harmful content (smartdesk/onboarding/safety.py)
     "cheap-router": "low",  # small reading jobs, e.g. a name and number from a message
     "voice-ready": "low",  # short answers that must start fast, for speech

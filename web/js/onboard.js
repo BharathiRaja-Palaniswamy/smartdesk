@@ -1,9 +1,9 @@
 /* Onboarding: what the owner has told us so far, and moving between steps.
-   Each step has its own file (business.js, upload.js, ready.js, phone.js, complete.js);
+   Each step has its own file (business.js, upload.js, ready.js, complete.js);
    they share this one object, SD. The documents are read and checked on the server (ready.js). */
 
 const SD = {
-  steps: ["business", "upload", "ready", "calls", "complete"],
+  steps: ["business", "upload", "ready", "complete"],
   business: {},   // step 1's answers
   files: [],      // step 2's accepted files: { file, kind }
   enter: {},      // step name -> function run when that step opens
@@ -19,6 +19,17 @@ const SD = {
     });
     window.scrollTo({ top: 0 });
     if (SD.enter[name]) SD.enter[name]();
+  },
+
+  /** Start over after a reset: every step empty, as on a first visit, so nothing of
+      the business just reset is shown (the form, the files, the results). */
+  restart() {
+    document.querySelectorAll(".step form").forEach((form) => form.reset());
+    document.querySelectorAll(".step .error").forEach((error) => { error.textContent = ""; });
+    document.getElementById("files").replaceChildren();
+    document.getElementById("authorized").checked = false;
+    Object.assign(SD, { business: {}, files: [], snippet: "", phone: null, phoneProblem: null, calendars: "" });
+    SD.go("business");
   },
 
   /** A text element, safely: owner's words are always text, never HTML. */

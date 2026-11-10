@@ -1,5 +1,10 @@
 """What can be booked, with whom, and when: all read from the business document.
 
+Two ways in (D35): a document in SmartDesk's layout is read here, by code,
+exactly (read_schedule); a document in any other layout is read at
+onboarding by a model and checked by code (onboarding/booking.py), and kept
+as data (schedule_data / schedule_from). business/store.get_schedule picks.
+
 The document is the source of truth for the schedule; the calendar
 (calendars/) holds only what changes day to day: the bookings, and later
 time off. So the two never disagree about who works when.
@@ -121,8 +126,8 @@ def _staff_member(item: Item, services: dict[str, Service]) -> StaffMember:
 
 def _hours(kb: KnowledgeBase) -> dict[int, tuple[time, time]]:
     """'Monday to Thursday: 10:00 AM – 8:00 PM' -> Monday..Thursday open 10:00 to 20:00."""
-    hours = {}
-    for line in kb.find(HOURS_BLOCK).lines:
+    hours, block = {}, kb.find(HOURS_BLOCK)
+    for line in block.lines if block else ():  # no hours block: not in this layout
         days, times = line.split(": ", 1)
         opens, closes = DASH.split(times)
         hours |= {day: (_clock(opens), _clock(closes)) for day in _days(days)}
@@ -156,3 +161,32 @@ def read_schedule(kb: KnowledgeBase) -> Schedule:
     staff_members = {item.name: _staff_member(item, services) for item in kb.items
                   if item.category == TEAM_SECTION and item.get("works")}
     return Schedule(services, staff_members, _hours(kb), _lessons(kb), _add_ons(kb))
+
+
+# ---- kept as data (a schedule read at onboarding) ------------------------------------------------
+
+def schedule_data(schedule: Schedule) -> dict:
+    """`schedule` as JSON-ready data: times as "HH:MM", weekdays as numbers (0 = Monday)."""
+    return {
+        "services": [{"name": s.name, "category": s.category, "minutes": list(s.minutes), "prices": list(s.prices)}
+                     for s in schedule.services.values()],
+        "staff_members": [{"name": t.name, "days": sorted(t.days), "services": list(t.services)}
+                          for t in schedule.staff_members.values()],
+        "hours": {str(day): [opens.strftime("%H:%M"), closes.strftime("%H:%M")]
+                  for day, (opens, closes) in sorted(schedule.hours.items())},
+        "lessons": [{"day": lesson.day, "start": lesson.start.strftime("%H:%M"), "minutes": lesson.minutes,
+                     "name": lesson.name, "teacher": lesson.teacher} for lesson in schedule.lessons],
+        "add_ons": dict(schedule.add_ons),
+    }
+
+
+def schedule_from(data: dict) -> Schedule:
+    """The schedule kept as data by schedule_data."""
+    services = {s["name"]: Service(s["name"], s["category"], tuple(s["minutes"]), tuple(s["prices"]))
+                for s in data["services"]}
+    staff = {t["name"]: StaffMember(t["name"], frozenset(t["days"]), tuple(t["services"])) for t in data["staff_members"]}
+    hours = {int(day): (time.fromisoformat(opens), time.fromisoformat(closes))
+             for day, (opens, closes) in data["hours"].items()}
+    lessons = tuple(Lesson(x["day"], time.fromisoformat(x["start"]), x["minutes"], x["name"], x["teacher"])
+                    for x in data.get("lessons", []))
+    return Schedule(services, staff, hours, lessons, dict(data.get("add_ons", {})))

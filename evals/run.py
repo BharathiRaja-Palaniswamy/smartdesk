@@ -81,12 +81,16 @@ def _counting(spent: list) -> None:
 
 def _played(case: golden.Case, label: str, folder: Path, chat) -> dict:
     """Plays and grades the case. A case that cannot be played (a route's error, say)
-    fails with the reason, and the run goes on."""
+    or graded (the judge timing out) fails with the reason, and the run goes on."""
     try:
         seen = play(case, label, folder, chat)
     except Exception as error:
         return {"layers": {"errors": [f"{type(error).__name__}: {error}"[:300]]}, "conversation": []}
-    return {"layers": grade(case, seen), "conversation": seen["conversation"]}
+    try:
+        return {"layers": grade(case, seen), "conversation": seen["conversation"]}
+    except Exception as error:
+        return {"layers": {"errors": [f"grading: {type(error).__name__}: {error}"[:300]]},
+                "conversation": seen["conversation"]}
 
 
 def _print(result: Result) -> None:

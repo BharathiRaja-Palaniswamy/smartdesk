@@ -18,7 +18,11 @@ developer's `.env` says (load_dotenv never replaces a variable already set):
   a year of sample bookings and a small golden eval set. SmartDesk holds no real business's data; tests
   never depend on one.
 - There is no Google key, so a test can never reach the real calendars; the
-  booking tests use a stand-in calendar (standin_calendar.py).
+  booking tests use a stand-in calendar (standin_calendar.py). The calendar
+  setting is the default, whatever `.env` chooses for running the app.
+- There is no ElevenLabs key or phone setup, so a test can never set up a
+  phone line or phone anyone; those tests stand in for ElevenLabs themselves
+  (test_onboarding.py, test_waitlist.py).
 - Debug mode is off, so replies have their usual shape; the debug test
   turns it on itself.
 - The owner's password is a known test one; `signed_in()` gives a test
@@ -45,6 +49,16 @@ os.environ["SMARTDESK_DEBUG"] = "false"
 os.environ["SMARTDESK_OWNER_PASSWORD"] = "test-owner-password"
 os.environ["SMARTDESK_SESSION_SECRET"] = "test-session-secret"
 os.environ["GOOGLE_SERVICE_ACCOUNT"] = ""
+os.environ["SMARTDESK_CALENDAR"] = "google"  # the default, with no key: never a real calendar
+os.environ["SMARTDESK_CALENDAR_OWNER"] = ""
+os.environ["SMARTDESK_RETRIEVAL_TOP_K"] = "3"
+os.environ["ELEVENLABS_API_KEY"] = ""
+os.environ["TWILIO_ACCOUNT_SID"] = ""
+os.environ["TWILIO_AUTH_TOKEN"] = ""
+os.environ["SMARTDESK_CALL_ANY_TIME"] = "false"
+os.environ["SMARTDESK_VOICE_SECRET"] = ""
+os.environ["SMARTDESK_PUBLIC_URL"] = ""
+os.environ["SMARTDESK_VOICE_ID"] = ""
 os.environ["SMARTDESK_DATA"] = str(FIXTURES / "business.md")
 os.environ["SMARTDESK_REPORT_DATA"] = str(FIXTURES / "bookings.json")
 os.environ["SMARTDESK_EVAL_SET"] = str(FIXTURES / "golden.json")
@@ -56,12 +70,14 @@ def own_business_folder(tmp_path, monkeypatch):
     offers) in an empty temporary folder: a business onboarded on this machine
     never reaches a test, and a test never writes into the project. The parsed
     document is forgotten before and after, so none is carried between folders."""
-    from smartdesk.business.store import get_knowledge
+    from smartdesk.business.store import get_knowledge, get_schedule
 
     monkeypatch.setenv("SMARTDESK_BUSINESS_FOLDER", str(tmp_path / "business"))
     get_knowledge.cache_clear()
+    get_schedule.cache_clear()
     yield
     get_knowledge.cache_clear()
+    get_schedule.cache_clear()
 
 
 @pytest.fixture(autouse=True)

@@ -46,7 +46,7 @@ from ..booking.appointments import Appointments, get_appointments
 from ..booking.calendars import Booking
 from ..booking.errors import UNAVAILABLE, BookingError, CalendarUnavailable
 from ..waitlist.recovery import opened
-from .booking import Plan, check_plan
+from .booking import Plan, check_plan, twelve
 from .rules import MAX_FAILED_PLANS
 from .staff import record_handoff
 
@@ -101,15 +101,16 @@ def _clashes(desk: Appointments, made: list[Booking], old: Booking | None = None
         if old and old.staff_member == booking.staff_member and (old.start, old.end) in periods:
             periods.remove((old.start, old.end))  # cancelled next
         if periods:
-            clashes.append(f"{booking.service} with {booking.staff_member} at {booking.start:%a %d %b %H:%M} was "
+            clashes.append(f"{booking.service} with {booking.staff_member} at {booking.start:%a %d %b} {twelve(booking.start)} was "
                            "taken at the same moment.")
     return clashes
 
 
 def execute(plan: Plan, name: str, phone: str, desk: Appointments, replaces: str | None = None) -> Outcome:
     """Book every item of `plan` for this customer, or none of them; for a change,
-    then cancel the booking `replaces` (its reference)."""
-    old = desk.calendar.find(replaces) if replaces else None
+    then cancel the booking `replaces` (its reference), and offer its time to the
+    waitlist as a cancellation's is (if it is really free now: waitlist/recovery.opened)."""
+    old, freed = (desk.calendar.find(replaces) if replaces else None), None
     with _holding({item.staff_member for item in plan.items} | ({old.staff_member} if old else set())):
         if problems := check_plan(plan, desk, old):
             return Outcome(problems=problems)
@@ -122,14 +123,16 @@ def execute(plan: Plan, name: str, phone: str, desk: Appointments, replaces: str
                 _undo(desk, made)
                 return Outcome(problems=clashes)
             if replaces:
-                desk.cancel(replaces, phone)
+                freed = desk.cancel(replaces, phone)
         except BookingError as error:
             _undo(desk, made)
             return Outcome(problems=[str(error)])
         except CalendarUnavailable:
             _undo(desk, made)  # may fail too, if the calendar is down; the error goes up either way
             raise
-        return Outcome(booked=made)
+    if freed:
+        opened(freed)  # the empty chair a move leaves, once the staff members' hold is released
+    return Outcome(booked=made)
 
 
 def book(plan: dict[str, Any], replaces: str, name: str, phone: str, failed: int) -> tuple[dict[str, Any], int]:

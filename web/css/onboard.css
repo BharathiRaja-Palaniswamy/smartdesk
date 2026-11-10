@@ -1,4 +1,4 @@
-/* Onboarding: the stepper, the five steps and their parts. */
+/* Onboarding: the stepper, the four steps and their parts. */
 
 .onboard { max-width: 760px; margin: 0 auto; padding: 32px 16px 80px; }
 
@@ -12,7 +12,7 @@
 }
 
 /* Stepper */
-.stepper { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 28px; }
+.stepper { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 28px; }
 .stepper li { border-top: 4px solid var(--line); padding-top: 8px; font-size: 14px; color: var(--faint); }
 .stepper li.done { border-color: var(--good); color: var(--muted); }
 .stepper li.now { border-color: var(--accent); color: var(--ink); font-weight: 600; }
@@ -82,17 +82,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .stepper li { font-size: 12px; }
 }
 
-/* Reset (development only): set apart, in the warning colours */
-.danger { margin-top: 48px; padding: 20px; border: 1px dashed #e7b9b5; border-radius: var(--radius); background: #fff; }
-.danger .label { color: #a3302a; }
-.danger h3 { margin: 4px 0 6px; }
-.danger .field { margin-top: 14px; }
-.danger-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-.danger-btn { border-color: #a3302a; color: #a3302a; }
-.danger-btn:hover { background: #fbeceb; }
-.danger-go { background: #a3302a; border-color: #a3302a; }
-.danger-go:hover { background: #82241f; }
-.danger .progress { margin-top: 16px; }
 
 /* What the reading could not use: shown under the cards */
 .read-problems { list-style: none; display: grid; gap: 4px; margin-top: 10px; font-size: 13px; color: var(--warn); }
@@ -117,13 +106,24 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .findings .why { font-size: 13px; font-weight: 600; color: #a3302a; }
 .findings q { color: var(--muted); }
 
-/* Phone support: two choices, then the cost to agree to */
-.choices { display: grid; gap: 10px; margin: 8px 0 16px; }
-.choice { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; cursor: pointer; }
-.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.choice input { margin-top: 4px; }
-.choice strong { display: block; }
-.choice .muted { font-size: 14px; }
-.cost h3 { font-size: 16px; margin-bottom: 6px; }
-.cost .consent { margin-top: 12px; }
+/* Done: the business's number, now answered by its assistant */
 .phone-number { font-size: 28px; font-weight: 700; letter-spacing: 0.02em; margin: 4px 0 8px; }
+
+/* The business onboarded here: a small card in the header, with a way to start over */
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.live-card { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border: 1px solid var(--line);
+  border-radius: 999px; background: #fff; font-size: 14px; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.live-name { font-weight: 600; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-state { color: var(--muted); }
+.live-reset { border: 0; background: none; color: #a3302a; font: inherit; font-weight: 600; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.live-reset:hover { background: #fbeceb; }
+.live-reset:disabled { color: var(--faint); cursor: default; background: none; }
+.reset-pop { position: absolute; right: 0; top: calc(100% + 8px); width: min(320px, calc(100vw - 32px)); z-index: 10; padding: 16px;
+  background: #fff; border: 1px solid #e7b9b5; border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
+.reset-note { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.reset-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.danger-go { background: #a3302a; border-color: #a3302a; }
+.danger-go:hover { background: #82241f; }
+.reset-pop .progress { margin: 12px 0 0; }
+@media (max-width: 560px) { .topbar-right > .muted { display: none; } }

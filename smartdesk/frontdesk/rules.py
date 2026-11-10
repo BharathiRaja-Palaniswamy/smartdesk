@@ -21,12 +21,16 @@ A new situation should fit one of these, not add a rule of its own.
      (details.py, details.py)
 
   3. Nothing changes without a yes to exactly what will happen.
-     Code writes each question: the details read back, the plan found, the
+     Code writes each question, one per change: the plan found, after what
+     the check found about a time they asked for ("16:00 is taken"), or the
      bookings to cancel (or what a change cancels and books). A yes that also
-     changes or questions it (YES, BUT) is not a yes. What was done is told
+     changes or questions it (YES, BUT) is not a yes. Text is read with plain
+     quotes (plain_quotes): a phone's "don’t" is a "don't". What was done is told
      from what code did: a reply saying something was booked, changed or
      cancelled (CLAIMS_DONE) when nothing was this turn is not sent; the agent
-     is asked again (NOT_DONE), and a second time the staff take over.
+     is asked again (NOT_DONE), and a second time the staff take over. Nor
+     does the agent ask the yes itself: a reply asking them to confirm a
+     booking at a time (ASKS_TO_CONFIRM) is replaced by the check (CHECK_FIRST).
      (yes.py, flow.py)
 
   4. A booking is all or nothing, and never twice.
@@ -58,10 +62,25 @@ Who may use which tool is the access rules' (smartdesk/access/permissions.py).
 import re
 from datetime import time
 
+# ---- all: text that code reads ---------------------------------------------------------------
+
+# Typographic quotes made plain, so every rule reads "don’t" (a phone keyboard's) as "don't":
+# each customer message as it comes in (agent/__init__.respond), and each reply the agent writes
+# before it is checked (flow._untrue).
+QUOTES = str.maketrans({"\u2018": "'", "\u2019": "'", "\u02bc": "'", "\u201c": '"', "\u201d": '"'})
+
+
+def plain_quotes(text: str) -> str:
+    """`text` with typographic quotes made plain."""
+    return text.translate(QUOTES)
+
+
 # ---- 2: every detail is the customer's own --------------------------------------------------
 
 # A booking request's intent -> the details it needs before anything is looked up.
-NEEDS = {"new": ["services", "day", "time"], "change": ["references", "services", "day", "time"],
+# A new booking or a change needs only the service: no day or time means the earliest openings
+# (booking.openings), a day with no time the earliest time that day.
+NEEDS = {"new": ["services"], "change": ["references", "services"],
          "availability": ["services"], "cancel": ["references"], "my_bookings": []}
 # A word shared by this many things or more is a kind ("massage", "facial", "wax"), not a name:
 # "a facial" picks out no service; "deep tissue" picks out Deep Tissue Massage.
@@ -83,14 +102,28 @@ YES = re.compile(r"^\s*(y|yes|yeah|yep|yup|sure|ok|okay|confirm(ed)?|please do|g
 # ...unless it goes on to change or question it: "yes, but at 4pm instead?" is not a yes.
 BUT = re.compile(r"\b(but|instead|change|different|another|not|don'?t)\b|\?", re.IGNORECASE)
 
-# A reply saying the customer's booking was made, changed or cancelled. Not "Shall I book…?",
-# and not "4 pm is booked" (a time taken): only what was done for them.
+# A reply saying the customer's booking was made, changed or cancelled, or is being ("I'm booking
+# it", "Let me cancel that"). Not "Shall I book…?", and not "4 pm is booked" (a time taken): only
+# what was done, or said to be under way, for them.
 CLAIMS_DONE = re.compile(
     r"\b(you'?re (all )?(set|booked|confirmed)"
+    r"|(i'?m|i am|we'?re|we are) (now |just )?(booking|cancell?ing|rescheduling|moving|changing|confirming)"
+    r"|let me (book|cancel|reschedule|move|change|confirm)"
     r"|(i|we)( have|'ve)( now| just)? (booked|cancell?ed|rescheduled|moved|changed|confirmed)"
     r"|(has|have) (now )?been (booked|cancell?ed|rescheduled|moved|changed|confirmed)"
     r"|(booking|appointment|reservation) is (now )?(confirmed|booked|cancell?ed))\b",
     re.IGNORECASE)
+# A reply asking the customer to confirm a booking at a time ("Would you like to book it at 5 PM?
+# Let me know so I can confirm"): the one confirmation is code's question, asked after the check, so
+# the agent is told to check instead (CHECK_FIRST). An invitation with no time ("Would you like to book
+# a session?") is not one.
+ASKS_TO_CONFIRM = re.compile(
+    r"\b((shall|should|can|may) i (book|confirm|reserve)|would you like (me )?to (book|confirm|reserve)"
+    r"|(do you )?want (me )?to (book|confirm|reserve)|let me know (so|and) i (can|will|'ll) (book|confirm)"
+    r"|confirm (it|this|that|the booking|your booking))\b", re.IGNORECASE)
+A_TIME = re.compile(r"\b\d{1,2}(:\d{2})?\s?(am|pm|a\.m\.|p\.m\.)|\b\d{1,2}:\d{2}\b", re.IGNORECASE)
+CHECK_FIRST = ("Do not ask the customer to confirm a booking yourself. Call booking with the service, day and "
+               "time they asked for: the system checks the calendar and asks them to confirm, once.")
 # Told to the agent, once, when its reply said so and nothing was done.
 NOT_DONE = ("Nothing has been booked, changed or cancelled in this conversation turn. Never tell the customer "
             "something was done unless a tool result shows it. To book, change or cancel, send the request "

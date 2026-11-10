@@ -1,7 +1,7 @@
 /* Step 5: live. Shows the snippet that puts the chat on the owner's website,
-   as the server gave it at Go live (POST /api/onboarding/go-live, phone.js),
-   the phone line with how to forward calls to it when the owner chose phone
-   support, and the way to the website preview (preview.html). */
+   as the server gave it at Go live (POST /api/onboarding/go-live, ready.js), the
+   business's number now answered by its assistant, or why it is not yet, its
+   staff calendars made ready, and the way to the website preview (preview.html). */
 
 (() => {
   const snippet = document.getElementById("snippet");
@@ -10,9 +10,12 @@
   SD.enter.complete = () => {
     document.getElementById("done-title").textContent = `${SD.business.name} is live`;
     snippet.textContent = SD.snippet;
-    document.getElementById("phone-done").hidden = !SD.phone;
-    document.getElementById("phone-number").textContent = SD.phone || "";
-    document.getElementById("next-phone").hidden = Boolean(SD.phone);
+    document.getElementById("phone-number").textContent = SD.phone || "Not answered yet";
+    document.getElementById("phone-note").textContent = SD.phone
+      ? "Your assistant answers calls to your business number, and calls customers on your waitlist when a slot opens."
+      : SD.phoneProblem || "";
+    document.getElementById("calendars-note").textContent = SD.calendars || "";
+    SD.showLive();  // the business is live now: its card shows in the header (reset.js)
     copy.textContent = "Copy snippet";
   };
 

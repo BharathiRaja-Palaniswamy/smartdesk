@@ -52,7 +52,7 @@ Open slots go unfilled.
 | First release (spas and salons first) | Planned for later |
 |---|---|
 | Onboarding from business basics and documents | Learning from past support call recordings |
-| A safety check of every upload before it goes live | Booking from any document format (a services table) |
+| A safety check of every upload; booking from documents in any layout | Classes and packages from any layout |
 | Website chat assistant | Campaign management |
 | Phone support | More customer engagement workflows |
 | Full booking: availability, book, reschedule, cancel, on Google Calendar | Connecting to existing booking systems (Square and others) |

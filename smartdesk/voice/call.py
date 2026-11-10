@@ -30,6 +30,12 @@ class Call:
     said: str  # the caller's latest words, as transcribed
 
 
+def thread_of(call_id: str) -> str:
+    """The agent's conversation for the call `call_id`: one per call, the same
+    whether the customer called in or SmartDesk called them (waitlist/calls.py)."""
+    return f"call-{call_id}"
+
+
 def _text(content: str | list | None) -> str:
     """A message's text, whether sent as a string or as a list of parts."""
     if isinstance(content, list):

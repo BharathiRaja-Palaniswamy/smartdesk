@@ -8,33 +8,34 @@ asks the question written here, and goes ahead only if the customer's
 next message is a yes.
 
 Three things wait for a yes:
-  details   the details the agent collected, read back before booking (code)
-            looks for times (`details_question`), so a wrong detail is fixed
-            before anything is planned
-  plan      the times found, every item of the plan (`plan_question`); for a
-            change, which booking is cancelled and what is booked instead
+  plan      the times found, every item of the plan (`plan_question`), after
+            what the check found about the time asked for (`checked`: "16:00
+            is free", "16:00 is taken"); for a change, which booking is
+            cancelled and what is booked instead
   cancel    the booking to cancel (`cancel_question`)
+  waitlist  joining the waitlist, and the number we will call (`waitlist_question`)
 Booking (code) checked the plan against the calendar (booking.py) and
 the cancellation against the 30-minute rule before asking, so the customer
 is never asked to confirm something that would then fail.
 """
 
-import calendar
 from datetime import datetime
 from typing import Any
 
 from ..booking.appointments import get_appointments
-from .booking import Plan
-from .rules import BUT, YES
+from ..business.store import get_schedule
+from .booking import Plan, twelve
+from .rules import BUT, YES, plain_quotes
 
 # The replies to tap, by what is waiting for the yes.
-CHOICES = {"details": ["Yes, that's right", "Change something"], "plan": ["Yes, book it", "No"],
-           "cancel": ["Yes, cancel it", "No, keep it"]}
+CHOICES = {"plan": ["Yes, book it", "No"], "cancel": ["Yes, cancel it", "No, keep it"],
+           "waitlist": ["Yes, add me", "No, thanks"]}
 
 
 
 def is_yes(message: str) -> bool:
-    """True when the customer's reply is a plain yes."""
+    """True when the customer's reply is a plain yes ("Yes, don’t" is not one)."""
+    message = plain_quotes(message)
     return bool(YES.match(message)) and not BUT.search(message)
 
 
@@ -46,11 +47,9 @@ def day_words(day: datetime, spoken: bool) -> str:
     return f"{day:%A} the {day.day}{suffix} of {day:%B}"
 
 
-def time_words(moment: datetime, spoken: bool) -> str:
-    """'15:00' to read; '3 PM' to say."""
-    if not spoken:
-        return f"{moment:%H:%M}"
-    return f"{moment:%I}".lstrip("0") + (f":{moment:%M}" if moment.minute else "") + f" {moment:%p}"
+def time_words(moment, spoken: bool = False) -> str:
+    """'3 PM', '3:30 PM': to read and to say alike (booking.twelve)."""
+    return twelve(moment)
 
 
 def when(start: datetime, spoken: bool) -> str:
@@ -58,39 +57,29 @@ def when(start: datetime, spoken: bool) -> str:
     return f"{day_words(start, spoken)} at {time_words(start, spoken)}"
 
 
-PARTS_OF_DAY = {"morning", "afternoon", "evening"}
+def checked(asked: dict[str, Any], time_said: str, plan: Plan, spoken: bool) -> str:
+    """What the check found about the one time the customer asked for (their words name
+    one, `time_said`, or the request's window is one time): "16:00 is free. " when the
+    plan starts then; when it starts at another, why: "We open at 10:00 on Sundays. "
+    or "We close at 17:00 on Sundays. " for a time outside the day's hours, otherwise
+    "16:00 is taken. ", so a different time is never offered without the true reason;
+    "" when they asked for no one time."""
+    from .details import one_time  # imported here: details.py imports this module
 
-
-def details_question(request: dict[str, Any], said: dict[str, str], spoken: bool = False) -> str:
-    """What to ask before booking (code) looks for times: the details collected
-    (a BookingRequest's fields), so the customer can correct them. The day and
-    the time are in the customer's own words (`said`: "tomorrow", "morning"),
-    with the date code worked out from them, so it can be checked; the times
-    code reads from the words ("morning" is before 12:00) are only for finding
-    times, never shown as if the customer had said them."""
-    day = day_words(datetime.fromisoformat(request["day"]), spoken)
-    def lower(words: str) -> str:  # mid-sentence: "Today" -> "today"; a name ("Friday", "October") keeps its capital
-        first = words.split()[0].lower() if words.split() else ""
-        names = {d.lower() for d in calendar.day_name} | {m.lower()[:3] for m in calendar.month_name if m}
-        return words if first in names or first[:3] in names else words[:1].lower() + words[1:]
-    their_day, their_time = lower(said.get("day", "").strip()), lower(said.get("time", "").strip())
-    if their_time and their_time.lower() in their_day.lower():  # said once, in the day: "this Friday morning"
-        their_time = ""
-    # "tomorrow (Monday 26 October)"; "on Friday 30 October" when their words are in the date already
-    if "same" in f"{their_day} {their_time}" and request.get("after"):  # "same time": say which it is
-        day += f", from {request['after']}"
-    on = f"{their_day} ({day})" if their_day and their_day.lower() not in day.lower() else f"on {day}"
-    package = f" (the {request['package']})" if request.get("package") else ""
-    extras = f" plus {' and '.join(request['add_ons']).lower()}" if request.get("add_ons") else ""
-    parts = [f"{' and '.join(request['services'])}{package}{extras} {on}"]
-    if their_time:  # "in the morning" for a part of the day; otherwise as they said it ("after 3pm")
-        parts.append(f"in the {their_time}" if their_time.lower() in PARTS_OF_DAY else their_time)
-    elif request.get("after") and "same" not in their_day:  # a change keeping its time: say which
-        parts.append(f"from {request['after']}")
-    parts += [f"with {request['staff_member']}"] if request.get("staff_member") else []
-    parts += [f"instead of your booking {request['references'][0]}"] if request.get("references") else []
-    notes = f" Also: {request['notes']}." if request.get("notes") else ""
-    return f"Just to check before I look for times: {', '.join(parts)}.{notes} Is that right?"
+    after, before = asked.get("after", ""), asked.get("before", "")
+    exact = after if after and (after == before or (not before and one_time(time_said))) else ""
+    if not exact or not plan.items:
+        return ""
+    start, clock = plan.items[0].start, datetime.strptime(exact, "%H:%M")
+    said = twelve(clock)
+    if start.strftime("%H:%M") == exact:
+        return f"{said} is free. "
+    hours = get_schedule().hours.get(start.weekday())  # the opening hours: the schedule's, no calendar needed
+    if hours and clock.time() < hours[0]:
+        return f"We open at {twelve(hours[0])} on {start:%A}s. "
+    if hours and clock.time() >= hours[1]:
+        return f"We close at {twelve(hours[1])} on {start:%A}s. "
+    return f"{said} is taken. "
 
 
 def plan_question(plan: Plan, name: str, phone: str, spoken: bool = False,
@@ -142,6 +131,21 @@ def cancel_question(bookings: list[dict[str, Any]], spoken: bool = False) -> str
     return f"Shall I cancel these {len(bookings)} bookings? {listed}"
 
 
+def _waited(waitlist: dict[str, Any], spoken: bool) -> str:
+    """"Signature Radiance Facial on Friday 13 November at 17:00": the waitlist, as said back."""
+    day = day_words(datetime.fromisoformat(waitlist["day"]), spoken)
+    after, before = (twelve(datetime.strptime(waitlist[key], "%H:%M")) if waitlist.get(key) else ""
+                     for key in ("after", "before"))
+    times = (f"at {after}" if after and after == before else f"between {after} and {before}" if after and before
+             else f"from {after}" if after else f"before {before}" if before else "at any time")
+    return f"{waitlist['service']} on {day} {times}"
+
+
+def waitlist_question(waitlist: dict[str, Any], phone: str, spoken: bool = False) -> str:
+    """What to ask before adding the customer to the waitlist: what for, and the number we will call."""
+    return f"Shall I add you to the waitlist for {_waited(waitlist, spoken)}? If it opens up, we'll call you at {phone}."
+
+
 def done_message(result: dict[str, Any], spoken: bool = False) -> str:
     """What to tell the customer once their yes is carried out: each booking made,
     with its reference (theirs to change or cancel it later), and each one cancelled.
@@ -149,6 +153,8 @@ def done_message(result: dict[str, Any], spoken: bool = False) -> str:
     by code, as the questions are, so no reference or time can be left out or changed."""
     if result.get("not_booked") or result.get("not_cancelled") or result.get("error"):
         return ""
+    if result.get("waiting"):
+        return f"You're on the waitlist for {_waited(result, spoken)}. If it opens up, we'll call you."
     def said(reference: str) -> str:  # on a call, letter by letter
         return " ".join(reference) if spoken else reference
     def one(booking: dict[str, Any]) -> str:

@@ -15,7 +15,29 @@
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="index.html">SmartDesk</a>
-    <span class="muted">Business setup</span>
+    <div class="topbar-right">
+      <span class="muted">Business setup</span>
+      <!-- The business onboarded here, when there is one, with a way to start over (reset.js) -->
+      <div class="live-card" id="live-card" hidden>
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="live-name" id="live-name"></span>
+        <span class="live-state">live</span>
+        <button class="live-reset" type="button" id="reset-start">Reset</button>
+        <div class="reset-pop" id="reset-confirm" role="dialog" aria-label="Reset onboarding" hidden>
+          <p class="reset-note">Forgets this business, its documents, its phone setup, every booking on its calendars, and the waitlist (the calendars themselves stay), so you can onboard again. It can't be undone.</p>
+          <label class="field" for="reset-name">
+            <span id="reset-prompt"></span>
+            <input type="text" id="reset-name" autocomplete="off">
+          </label>
+          <div class="reset-actions">
+            <button class="btn ghost" type="button" id="reset-cancel">Cancel</button>
+            <button class="btn danger-go" type="button" id="reset-go" disabled>Reset</button>
+          </div>
+          <p class="error" id="reset-error" role="alert"></p>
+          <ul class="progress" id="reset-progress" hidden></ul>
+        </div>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -27,8 +49,7 @@
     <li data-for="business">1. Your business</li>
     <li data-for="upload">2. Documents</li>
     <li data-for="ready">3. Check</li>
-    <li data-for="calls">4. Phone</li>
-    <li data-for="complete">5. Done</li>
+    <li data-for="complete">4. Done</li>
   </ol>
 
   <!-- Step 1: tell us about your business -->
@@ -66,12 +87,9 @@
         </div>
         <div class="field">
           <label for="phone">Business phone</label>
-          <input type="tel" id="phone" name="phone" autocomplete="tel">
+          <input type="tel" id="phone" name="phone" autocomplete="tel" required>
+          <span class="hint">The number your customers call: your assistant answers it.</span>
         </div>
-      </div>
-      <div class="field">
-        <label for="hours">Opening hours</label>
-        <input type="text" id="hours" name="hours" placeholder="e.g. Mon–Fri 9–7, Sat 10–5, Sun closed" required>
       </div>
       <div class="field">
         <label for="about">What should customers know about you?</label>
@@ -121,40 +139,11 @@
     <p class="error" id="ready-error" role="alert"></p>
     <div class="actions" id="ready-actions" hidden>
       <button class="btn ghost" type="button" data-back>Upload again</button>
-      <button class="btn" type="button" id="proceed" disabled>Proceed</button>
+      <button class="btn" type="button" id="go-live" disabled>Go live</button>
     </div>
   </section>
 
-  <!-- Step 4: phone support, if the owner wants calls answered too (D32) -->
-  <section class="step" id="calls">
-    <h1>Answer phone calls too?</h1>
-    <p class="muted">Your assistant can answer calls the way it answers chats: questions, bookings and changes.</p>
-    <div class="choices" role="radiogroup" aria-label="Phone support">
-      <label class="choice">
-        <input type="radio" name="phone" value="yes">
-        <span><strong>Yes, add phone support</strong>
-          <span class="muted">You get a phone number for your assistant. Keep your own number and forward calls to it.</span></span>
-      </label>
-      <label class="choice">
-        <input type="radio" name="phone" value="no" checked>
-        <span><strong>No, just the website chat</strong>
-          <span class="muted">You can add phone support later.</span></span>
-      </label>
-    </div>
-    <section class="card cost" id="phone-cost" hidden>
-      <h3>What it costs</h3>
-      <p id="phone-price"></p>
-      <label class="consent"><input type="checkbox" id="agree-cost"> <span>I agree to this cost for my phone line.</span></label>
-    </section>
-    <p class="hint" id="phone-unavailable" hidden>Phone support isn't available right now. You can add it later.</p>
-    <p class="error" id="phone-error" role="alert"></p>
-    <div class="actions">
-      <span></span>
-      <button class="btn" type="button" id="go-live">Go live</button>
-    </div>
-  </section>
-
-  <!-- Step 5: onboarding complete -->
+  <!-- Step 4: onboarding complete -->
   <section class="step" id="complete">
     <p class="done-mark" aria-hidden="true">✓</p>
     <h1 id="done-title">You're set up</h1>
@@ -165,45 +154,20 @@
     <p class="muted">Paste this just before <code>&lt;/body&gt;</code> on your site.</p>
     <pre class="snippet" id="snippet"></pre>
     <button class="btn ghost" type="button" id="copy">Copy snippet</button>
-    <section id="phone-done" hidden>
-      <h3 style="margin-top:28px">Your phone line</h3>
+    <section class="phone-done">
+      <h3 style="margin-top:28px">Your phone</h3>
       <p class="phone-number" id="phone-number"></p>
-      <p class="muted">Calls to this number are answered by your assistant. Keep your own business number and forward calls to this one:</p>
-      <ul class="next muted">
-        <li><strong>All calls:</strong> on many US carriers, dial *72 and then this number; *73 turns it off.</li>
-        <li><strong>Only calls you miss, or when you're busy:</strong> ask your phone provider for conditional forwarding. Codes differ by provider.</li>
-        <li>Callers usually still show their own number, so your assistant can find their bookings.</li>
-      </ul>
+      <p class="muted" id="phone-note"></p>
+      <h3 style="margin-top:20px">Your calendars</h3>
+      <p class="muted" id="calendars-note"></p>
     </section>
     <h3 style="margin-top:28px">Next</h3>
     <ul class="next muted">
-      <li id="next-phone">Add phone support any time, so calls are answered too</li>
       <li>Connect your booking calendar</li>
       <li>Update a document any time: upload it again and it replaces the old version</li>
     </ul>
     <a class="btn" href="index.html">Back to home</a>
 
-    <!-- Development only: start onboarding over (docs/workflows/go-live.md, part C) -->
-    <div class="danger" id="danger">
-      <p class="label">Development only</p>
-      <h3>Reset onboarding</h3>
-      <p class="muted">Forgets the documents you just set up, so you can onboard again. Customers' bookings are kept. It can't be undone.</p>
-      <div class="danger-actions">
-        <button class="btn ghost danger-btn" type="button" id="reset-start">Reset onboarding</button>
-      </div>
-      <div id="reset-confirm" hidden>
-        <label class="field" for="reset-name">
-          <span id="reset-prompt"></span>
-          <input type="text" id="reset-name" autocomplete="off">
-        </label>
-        <div class="danger-actions">
-          <button class="btn ghost" type="button" id="reset-cancel">Cancel</button>
-          <button class="btn danger-go" type="button" id="reset-go" disabled>Reset onboarding</button>
-        </div>
-      </div>
-      <p class="error" id="reset-error" role="alert"></p>
-      <ul class="progress" id="reset-progress" hidden></ul>
-    </div>
   </section>
 
 </main>
@@ -212,7 +176,6 @@
 <script src="js/business.js"></script>
 <script src="js/upload.js"></script>
 <script src="js/ready.js"></script>
-<script src="js/phone.js"></script>
 <script src="js/complete.js"></script>
 <script src="js/reset.js"></script>
 </body>

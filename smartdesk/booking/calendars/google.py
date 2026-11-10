@@ -1,8 +1,9 @@
 """The staff members' calendars in Google Calendar, through the Calendar API.
 
 The app's only calendar (calendars/__init__.py). Each staff member has their own calendar,
-named after the business and the staff member ("Test Studio – Dev Patel"), so the
-calendars are found by name and nothing else needs to be configured.
+named after SmartDesk, the business and the staff member ("SmartDesk · Test Studio – Dev
+Patel"), so the calendars are found by name and nothing else needs to be configured, and
+they never mix with calendars another app keeps for the same business on the same account.
 
 When the app starts using Google Calendar, it creates the calendar of anyone
 in the team who has none yet (someone who just joined). If
@@ -36,6 +37,7 @@ as CalendarUnavailable (errors.py).
 import json
 from datetime import date, datetime, time
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -45,10 +47,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from httplib2 import HttpLib2Error
 
-from ...business.store import get_knowledge
+from ...business.store import get_knowledge, get_schedule
 from ...config import get_settings
 from ..errors import CalendarUnavailable
-from ..schedule import read_schedule
 from .base import Booking
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]  # read and write calendars
@@ -57,8 +58,8 @@ FAILURES = (HttpError, GoogleAuthError, HttpLib2Error, OSError, ValueError)
 
 
 def calendar_name(business: str, staff_member: str) -> str:
-    """The calendar a staff member's bookings go on: 'Test Studio – Dev Patel'."""
-    return f"{business} – {staff_member}"
+    """The calendar a staff member's bookings go on: 'SmartDesk · Test Studio – Dev Patel'."""
+    return f"SmartDesk · {business} – {staff_member}"
 
 
 def connect() -> Any:
@@ -76,10 +77,19 @@ def connect() -> Any:
         raise CalendarUnavailable(f"Could not read the Google service account key: {error}") from error
 
 
+class CalendarGone(CalendarUnavailable):
+    """A calendar the app knew is no longer there (deleted since): its list is read again."""
+
+
 def run(request: Any) -> dict[str, Any]:
-    """Send one prepared API request, turning any failure into CalendarUnavailable."""
+    """Send one prepared API request, turning any failure into CalendarUnavailable
+    (CalendarGone when Google answers that the calendar is not there)."""
     try:
         return request.execute()
+    except HttpError as error:
+        if getattr(error.resp, "status", None) == 404:
+            raise CalendarGone(f"A calendar is no longer there: {error}") from error
+        raise CalendarUnavailable(f"Google Calendar could not be reached: {error}") from error
     except FAILURES as error:
         raise CalendarUnavailable(f"Google Calendar could not be reached: {error}") from error
 
@@ -94,12 +104,42 @@ def own_calendars(api: Any) -> dict[str, str]:
             return calendars
 
 
+def delete_bookings(api: Any, business: str) -> int:
+    """Delete every booking on SmartDesk's calendars of `business` (onboarding reset),
+    keeping the calendars, so they stay shared with the owner. Only calendars named
+    "SmartDesk · <business> – <staff>": another app's calendars for the same business,
+    on the same account, are never touched. Returns how many bookings were deleted."""
+    prefix, deleted = calendar_name(business, ""), 0
+    for name, cid in own_calendars(api).items():
+        if not name.startswith(prefix):
+            continue
+        page = None
+        while True:
+            found = run(api.events().list(calendarId=cid, singleEvents=True, pageToken=page))
+            for event in found.get("items", []):
+                run(api.events().delete(calendarId=cid, eventId=event["id"]))
+                deleted += 1
+            if not (page := found.get("nextPageToken")):
+                break
+    return deleted
+
+
 class GoogleCalendar:
     """A Calendar (see base.py) backed by one Google calendar per staff member."""
 
     def __init__(self, api: Any, calendars: dict[str, str], zone: ZoneInfo) -> None:
         """`calendars`: staff member name -> Google calendar id."""
         self.api, self.calendars, self.zone = api, calendars, zone
+
+    def _run(self, request: Callable[[], Any]) -> dict[str, Any]:
+        """Send the request `request()` prepares; when a calendar it names is gone (deleted
+        since this list was read), read the calendars again (making any that are missing)
+        and send it once more, so a stale list never stops a booking or a cancellation."""
+        try:
+            return run(request())
+        except CalendarGone:
+            self.calendars = ensure_calendars(self.api)[0]
+            return run(request())
 
     def busy(self, staff_member: str, start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
         """Every event on the staff member's calendar between `start` and `end`, one period each.
@@ -112,7 +152,7 @@ class GoogleCalendar:
     def add(self, booking: Booking) -> None:
         """A new event on the staff member's calendar."""
         zone = str(self.zone)
-        run(self.api.events().insert(calendarId=self.calendars[booking.staff_member], body={
+        self._run(lambda: self.api.events().insert(calendarId=self.calendars[booking.staff_member], body={
             "summary": f"{booking.service} – {booking.name}",
             "description": f"Booked through the business's site.\nReference: {booking.id}\nPhone: {booking.phone}"
                            + (f"\nAdd-ons: {', '.join(booking.add_ons)}" if booking.add_ons else ""),
@@ -132,7 +172,8 @@ class GoogleCalendar:
     def remove(self, booking_id: str) -> None:
         """Delete the event for this booking."""
         for staff_member, event in self._events(privateExtendedProperty=f"reference={booking_id}"):
-            run(self.api.events().delete(calendarId=self.calendars[staff_member], eventId=event["id"]))
+            self._run(lambda who=staff_member, eid=event["id"]: self.api.events().delete(
+                calendarId=self.calendars[who], eventId=eid))
 
     def bookings(self, start: datetime, end: datetime, staff_member: str | None = None) -> list[Booking]:
         """The app's bookings between `start` and `end`, earliest first."""
@@ -149,8 +190,8 @@ class GoogleCalendar:
         for name in names:
             page = None
             while True:
-                found = run(self.api.events().list(calendarId=self.calendars[name], singleEvents=True,
-                                                   pageToken=page, **query))
+                found = self._run(lambda who=name, at=page: self.api.events().list(
+                    calendarId=self.calendars[who], singleEvents=True, pageToken=at, **query))
                 events += [(name, event) for event in found.get("items", [])]
                 if not (page := found.get("nextPageToken")):
                     break
@@ -197,7 +238,7 @@ def ensure_calendars(api: Any) -> tuple[dict[str, str], list[str]]:
     prefix = calendar_name(kb.name, "")
     calendars = {name.removeprefix(prefix): cid for name, cid in own_calendars(api).items()
                  if name.startswith(prefix)}
-    created = [person for person in read_schedule(kb).staff_members if person not in calendars]
+    created = [person for person in get_schedule().staff_members if person not in calendars]
     for person in created:
         calendars[person] = run(api.calendars().insert(body={
             "summary": calendar_name(kb.name, person), "timeZone": settings.timezone}))["id"]

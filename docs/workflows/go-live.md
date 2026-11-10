@@ -55,7 +55,7 @@ records each cell's status. The registry holds no business content.
 |---|---|---|---|---|---|
 | B1 | Check ready | code | at least one document processed and its safety check passed | stop with the reason | yes |
 | B2 | Widget key | code | new key, tied to the business's website domains; registry row | undo | yes (reuses the key) |
-| B3 | Phone line (optional) | code, **after the owner's yes to the monthly cost**; demo build: the set number is assigned, nothing bought (D32) | number bought (or an existing one attached) → voice agent → registry row | undo B2–B3; release only a number bought in this run | yes (never buys twice) |
+| B3 | Phone line (optional) | code, **after the owner's yes to the monthly cost**: through ElevenLabs' API, a secret, the business's own agent and the number attached to it (D36); demo build: the number already imported is used, nothing bought | number bought (or an existing one attached) → voice agent → registry row | undo B2–B3; release only a number bought in this run | yes (never buys twice) |
 | B4 | Calendar | code | each staff member's Google Calendar (D18) shared with SmartDesk and readable; free times found for one test day | undo B2–B3; tell the owner which calendar is missing | yes |
 | B5 | Activate | code | status *live*; audit entry | undo B2–B4 | yes |
 
@@ -80,7 +80,7 @@ undone and the cell keeps its earlier status, with a clear message.
 | C1 | Pause the assistant | status *resetting*; widget and phone say "temporarily unavailable" |
 | C2 | Stop processing | documents still being read are cancelled |
 | C3 | Remove search entries | the cell's Pinecone namespace emptied |
-| C4 | Remove documents and sections | documents and sections tables emptied in the cell's database; business basics and customer records (waitlist, offers, hand-offs, feedback, unanswered questions) kept, since they are about customers, not documents |
+| C4 | Remove documents, calendars and the waitlist | documents and sections tables emptied in the cell's database; every booking deleted from the business's own calendars, the calendars kept (still shared with the owner) (SmartDesk's "SmartDesk · <business> – <staff>" calendars only, never another app's), the waitlist and offers emptied, the phone line given back; business basics and other customer records (hand-offs, feedback, unanswered questions) kept |
 | C5 | Remove uploaded files | the cell's file folder emptied |
 | C6 | Check the cell is empty | zero documents, sections, services, search entries and files; otherwise stop and show what is left |
 | C7 | Ready to onboard again | status *draft*; the owner returns to the upload step |

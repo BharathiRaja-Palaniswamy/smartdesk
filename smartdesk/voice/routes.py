@@ -41,7 +41,7 @@ from ..frontdesk.staff import HANDOVER
 from ..config import get_settings
 from ..models import ModelError
 from ..search.errors import ModelUnavailable
-from .call import read_call
+from .call import read_call, thread_of
 from .stream import completion, sse
 
 router = APIRouter()
@@ -95,7 +95,7 @@ def _reply(call_id: str, caller: str, said: str) -> Iterator[str]:
     if not re.search(r"\w", said):  # no words (ElevenLabs sends "..." for silence): a nudge, no model needed
         yield NUDGE
         return
-    thread = f"call-{call_id}"
+    thread = thread_of(call_id)
     work = _turns.submit(respond, thread, said, channel="voice", caller=caller)
     if not wait([work], timeout=FILLER_AFTER).done:
         yield FILLER  # the caller hears something while the agent thinks
@@ -131,7 +131,7 @@ def chat_completions(body: Completion, authorization: str | None = Header(defaul
     call = read_call(body.messages)
     # Labelled like the chat's turns, so LangSmith shows each call as one thread.
     if call.id and (run := get_current_run_tree()):
-        run.add_metadata({"thread_id": f"call-{call.id}", "channel": "voice"})
+        run.add_metadata({"thread_id": thread_of(call.id), "channel": "voice"})
     pieces = _reply(call.id, call.caller, call.said)
     if body.stream:
         return StreamingResponse(sse(pieces), media_type="text/event-stream")

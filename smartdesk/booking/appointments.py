@@ -25,11 +25,11 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from ..business.store import get_knowledge
+from ..business.store import get_schedule
 from ..config import get_settings
 from .calendars import Booking, Calendar, get_calendar
 from .errors import BookingError
-from .schedule import Schedule, Service, StaffMember, read_schedule
+from .schedule import Schedule, Service, StaffMember
 
 
 @dataclass(frozen=True)
@@ -204,5 +204,5 @@ class Appointments:
 def get_appointments() -> Appointments:
     """The booking rules over the current document and the configured calendar."""
     settings = get_settings()
-    return Appointments(read_schedule(get_knowledge()), get_calendar(), ZoneInfo(settings.timezone),
+    return Appointments(get_schedule(), get_calendar(), ZoneInfo(settings.timezone),
                         settings.slot_minutes, settings.min_notice_minutes)

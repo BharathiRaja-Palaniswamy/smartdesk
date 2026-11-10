@@ -39,10 +39,11 @@ def test_only_what_the_customer_wrote_counts_not_the_time_notes():
                 AIMessage("Which day?")]
     words = customer_words(messages)
     assert "09:34" not in words and "book body scrub" in words
-    # the agent wrote today's date and the time now: neither was said, so both are still missing.
+    # the agent wrote today's date and the time now: neither was said, so neither is used (the
+    # earliest openings are offered instead: booking.openings).
     request, missing, _ = collect({"intent": "new", "services": ["Body Scrub"], "day_said": "Sunday",
                                    "time_said": "09:34"}, words, SUNDAY)
-    assert missing == ["day", "time"] and request.day == "" and request.after == ""
+    assert missing == [] and request.day == "" and request.after == ""
 
 
 def test_words_the_customer_wrote_are_read_into_the_request():
@@ -56,9 +57,10 @@ def test_words_the_customer_wrote_are_read_into_the_request():
 def test_what_each_kind_of_request_needs():
     def missing(args):
         return collect(args, "", SUNDAY)[1]
-    assert missing({"intent": "new"}) == ["services", "day", "time"]
+    # A day and a time are not needed: without them, the earliest openings are offered (rules.NEEDS).
+    assert missing({"intent": "new"}) == ["services"]
     # Not naming the booking, nor the new service: both are asked for (only the booking's own service carries over).
-    assert missing({"intent": "change", "services": ["Body Scrub"]}) == ["references", "services", "day", "time"]
+    assert missing({"intent": "change", "services": ["Body Scrub"]}) == ["references", "services"]
     assert missing({"intent": "cancel"}) == ["references"]
     assert missing({"intent": "availability", "services": ["Body Scrub"]}) == ["services"]  # not named
     assert collect({"intent": "availability", "services": ["Body Scrub"]}, "is the body scrub free", SUNDAY)[1] == []
@@ -83,7 +85,7 @@ def test_naming_the_package_names_its_services():
     package = ["Vitamin C Facial", "Express Facial", "Eyebrow Wax"]
     request, missing, unnamed = collect({"intent": "new", "services": package, "package": "Event Prep Package"},
                                         "the event prep one, thursday, any time", SUNDAY)
-    assert request.services == package and unnamed == [] and missing == ["day", "time"]  # not said as day_said yet
+    assert request.services == package and unnamed == [] and missing == []  # no day yet: the earliest openings
 
 
 def test_a_staff_member_counts_only_when_the_customer_asked_for_them():

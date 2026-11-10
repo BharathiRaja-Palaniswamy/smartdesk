@@ -41,8 +41,7 @@ from typing import Any
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 
 from ..booking.calendars import Booking
-from ..booking.schedule import read_schedule
-from ..business.store import get_knowledge
+from ..business.store import get_schedule
 from .booking import BookingRequest
 from .rules import ANY_TIME, EVERYTHING, NAMED_BY, NEEDS, PARTS_OF_DAY
 from .yes import is_yes
@@ -121,7 +120,7 @@ def picked_out(things: dict[str, set[str]], said: set[str], groups: dict[str, se
 def named_services(services: list[str], package: str, words: str) -> tuple[list[str], list[str]]:
     """(the services the customer named, the ones they did not): picked out among all
     the business's services, or all of a package's when they named the package."""
-    every = {name: _words(name) for name in read_schedule(get_knowledge()).services}
+    every = {name: _words(name) for name in get_schedule().services}
     group = _words(package) - {"package"}
     named = set(picked_out(every | {s: _words(s) for s in services}, _words(words),
                            {s: group for s in services}))
@@ -130,7 +129,7 @@ def named_services(services: list[str], package: str, words: str) -> tuple[list[
 
 def named_add_ons(add_ons: list[str], words: str) -> list[str]:
     """The add-ons the customer named, picked out among all the business's add-ons."""
-    every = {name: _words(name) for name in read_schedule(get_knowledge()).add_ons}
+    every = {name: _words(name) for name in get_schedule().add_ons}
     picked = set(picked_out(every, _words(words)))
     return [a for a in add_ons if a in picked]
 
@@ -289,6 +288,12 @@ def _clock(text: str) -> time | None:
     elif half is None and 1 <= hour <= 7:  # the business is open in the day: "at 3" is 3 in the afternoon
         hour += 12
     return time(hour, minute) if hour < 24 and minute < 60 else None
+
+
+def one_time(words: str) -> bool:
+    """Whether `words` name one clock time and nothing else ("4pm", "at 4pm", "16:00"): a
+    time the customer asked for, not a range; another time is offered only saying so (yes.taken)."""
+    return re.fullmatch(rf"(?:at |around )?{CLOCK}", words.lower().strip()) is not None
 
 
 def times_from(words: str) -> tuple[time | None, time | None] | None:

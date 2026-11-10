@@ -40,17 +40,19 @@ def request(**fields) -> BookingRequest:
 
 # ---- in code: no model call ----------------------------------------------------------------
 
-def test_what_is_missing_comes_with_the_days_that_fit(desk, monkeypatch):
+def test_a_service_with_no_day_or_time_gets_the_earliest_openings_to_choose_from(desk, monkeypatch):
+    # Rule (2026-11-09): no time preference -> the earliest appointments, as choices.
     sent = use_standin(monkeypatch, [])
-    result = missing_result(request(services=EVENT_PREP, package="Event Prep Package"), ["day", "time"], ASHA, desk)
-    assert result.status == "needs_info" and result.missing == ["day", "time"]
-    assert result.options[:2] == ["Thursday 2026-10-22", "Wednesday 2026-10-28"]
+    result = handle(request(services=EVENT_PREP, package="Event Prep Package"), ASHA, desk)
+    assert result.status == "options"
+    assert result.options[:2] == ["Thursday 22 October at 3 PM with Eli Brooks",
+                                  "Wednesday 28 October at 10 AM with Eli Brooks"]
     assert sent == []  # answered in code
 
 
-def test_which_days_are_free_is_answered_with_the_days_that_fit(desk):
+def test_which_days_are_free_is_answered_with_the_earliest_openings(desk):
     result = handle(request(intent="availability", services=EVENT_PREP), ASHA, desk)
-    assert result.status == "options" and "Wednesday 2026-10-28" in result.options
+    assert result.status == "options" and "Wednesday 28 October at 10 AM with Eli Brooks" in result.options
 
 
 def test_a_package_on_a_day_gets_a_plan_of_exactly_its_services(desk):
@@ -63,8 +65,8 @@ def test_a_package_on_a_day_gets_a_plan_of_exactly_its_services(desk):
 def test_a_day_that_does_not_work_says_why_and_offers_other_days(desk):
     result = handle(request(services=EVENT_PREP, day="2026-10-27"), ASHA, desk)  # Fay is off on Tuesdays
     assert result.status == "not_possible" and "Express Facial" in result.reason
-    assert result.reason.endswith("We are open 10:00 to 20:00 on Tuesdays.")  # the fact, so nothing is guessed
-    assert "Wednesday 2026-10-28" in result.options
+    assert result.reason.endswith("We are open 10 AM to 8 PM on Tuesdays.")  # the fact, so nothing is guessed
+    assert "Wednesday 28 October at 10 AM with Eli Brooks" in result.options  # a time to pick, not just a day
 
 
 def test_a_chosen_staff_member_is_kept(desk):
@@ -75,14 +77,14 @@ def test_a_chosen_staff_member_is_kept(desk):
 
 def test_availability_gives_times_not_a_plan(desk):
     result = handle(request(intent="availability", services=["Prenatal Massage"], day="2026-10-30"), ASHA, desk)
-    assert result.status == "options" and result.options[0].startswith("Prenatal Massage on Friday 30 October: 10:00")
+    assert result.status == "options" and result.options[0].startswith("Prenatal Massage on Friday 30 October: 10 AM")
 
 
 def test_availability_keeps_to_the_time_they_asked_for(desk):
     # "after 3pm" lists times from 15:00, the same window a booking keeps to.
     result = handle(request(intent="availability", services=["Prenatal Massage"], day="2026-10-30", after="15:00"),
                     ASHA, desk)
-    assert result.options[0].startswith("Prenatal Massage on Friday 30 October: 15:00")
+    assert result.options[0].startswith("Prenatal Massage on Friday 30 October: 3 PM")
 
 
 def test_their_bookings_and_a_cancellation_to_approve(desk):
@@ -129,8 +131,9 @@ def test_when_the_times_asked_for_are_taken_the_nearest_ones_are_offered(desk):
     result = handle(request(intent="availability", services=["Swedish Massage"], day="2026-10-22", before="12:00"),
                     ASHA, desk)  # the clock: Thursday 22 October, 14:10, so this morning is over
     assert result.options[0] == "Swedish Massage on Thursday 22 October: no free times before 12:00"
-    assert result.options[1].startswith("Swedish Massage on Thursday 22 October at other times: 15:00 with ")
-    assert result.options[2].startswith("Swedish Massage on other days, before 12:00: Friday 2026-10-23")
+    assert result.options[1].startswith("Swedish Massage on Thursday 22 October at other times: 3 PM with ")
+    # Rule (2026-11-09): a morning asked for -> other mornings offered.
+    assert result.options[2].startswith("Swedish Massage on other days, before 12:00: Friday 23 October at 10 AM with")
 
 
 def test_the_days_offered_instead_keep_to_the_times_and_staff_member_asked_for(desk):

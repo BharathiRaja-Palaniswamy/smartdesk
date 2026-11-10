@@ -19,24 +19,42 @@ For Demo Day, one business, without cells (M2) or background jobs:
   text written to an AI assistant. A finding must quote the document, or it
   is dropped. Any finding blocks going live: the owner sees each one in the
   document's own words, fixes the document and uploads it again.
-- Progress: one plain line says what is happening ("Reading your documents",
-  "Understanding your business", "Checking it's safe for your customers",
-  "Almost done"), then "All set" and **Proceed**; a flagged upload shows
-  **Proceed** disabled, with "Upload again".
-- Phone (D32): "Answer phone calls too?" A yes shows the line's cost
-  ($1.15 a month, first month free, plus about 0.85 cents a minute), which the
-  owner must agree to. Demo build: nothing is bought; the line is the number
-  SMARTDESK_PHONE_NUMBER names, already attached to the ElevenLabs agent. The
-  Done step shows it with how to forward the business's own number to it
-  (all calls, or only missed or busy ones). After the demo: SmartDesk's own
-  Twilio account, one subaccount per business, buys a local number by API.
+- Booking facts (booking.py, D35): after the check, the services (lengths and
+  prices), the team (days and services) and the opening hours are read, in any
+  layout. A document in SmartDesk's layout is read by code, exactly; any other
+  layout by one model call (`document-reader` profile), then checked by code:
+  a service's length and price must each be its own number in the service's
+  passage, a staff member's name and each opening hour must be written in the
+  document; what is not backed is left out and reported. A business that
+  names no staff books with one "Team" calendar. Kept as `schedule.json`;
+  booking reads it (business/store.get_schedule).
+- Progress: one plain line says which step is running ("Reading your
+  documents", "Checking it's safe for your customers", "Understanding your
+  services and team", then "Almost done" if it runs on), then what can be
+  booked ("6 services with 3 staff, open 6 days"), "All set" and **Proceed**;
+  a flagged upload shows **Proceed** disabled, with "Upload again".
+- Basics (step 1): name, type and the **business phone number** are required;
+  opening hours are not asked, they are read from the documents (D35).
+- Phone by default (D36, D37): Go live sets up the business's own number,
+  the one customers already call, through ElevenLabs' API (onboarding/phone.py):
+  find the number among those connected to ElevenLabs, a workspace secret, the
+  business's own agent (its greeting, the Call ID and Caller number lines, the
+  Custom LLM at SMARTDESK_PUBLIC_URL), and the
+  number attached to it. If the phone cannot be set up (the number is not
+  connected yet, the settings are missing, a step fails), what was made is
+  taken down and the **website chat still goes live**; the Done step says why
+  the phone is not answered yet. Reset gives the number back to the agent it
+  answered for before and deletes the rest.
+- Calendars at Go live (go-live B4): the calendar is made again for the
+  business now live, so each staff member read from its documents has a
+  Google calendar ("SmartDesk · <business> – <staff>", created where missing,
+  shared with SMARTDESK_CALENDAR_OWNER) before the first booking; reset forgets
+  it too. If Google cannot be reached the chat still goes live and Done says so.
 - Go live: the checked document is saved in the business's storage
   (`storage/business/`) and the agent uses it at once; the server refuses to
   go live with an unchecked or flagged document, whatever the page sends.
-- Booking reads services, staff and hours from the document's own structure
-  (a Markdown business document). Search and answers work for any format;
-  booking from any format (a services table read from the documents) is next
-  after the demo.
+- Booking works for any layout (D35, above); group classes and packages are
+  booked only from a document in SmartDesk's layout.
 
 ## 1. Purpose and boundaries *(Developer)*
 
@@ -47,7 +65,7 @@ For Demo Day, one business, without cells (M2) or background jobs:
 | **Input** | Business basics (form); documents with the owner's authorization |
 | **Output** | Sections in the business's Pinecone namespace; a live cell with widget code |
 | **Done when** | Go-live succeeds (`docs/workflows/go-live.md`, part B) |
-| **Out of scope (v1)** | Call recordings; questions to the owner about the business (D31); a services table read from any format; an Onboarding agent; phone-line setup (see the plan's roadmap) |
+| **Out of scope (v1)** | Call recordings; questions to the owner about the business (D31); classes and packages from documents outside SmartDesk's layout; an Onboarding agent; phone-line setup (see the plan's roadmap) |
 
 ### Documents accepted
 

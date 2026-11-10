@@ -35,8 +35,8 @@ from ..replies import ReplyItem
 from ..booking.actions import guarded
 from ..booking.appointments import digits, get_appointments
 from ..booking.errors import BookingError, CalendarUnavailable
-from ..booking.schedule import read_schedule
-from ..business.store import get_knowledge
+from ..business.store import get_knowledge, get_schedule
+from ..onboarding.phone import dialable
 from ..config import get_settings
 from ..search.retriever import get_retriever
 from ..models import make_tool, structured
@@ -80,9 +80,14 @@ threat: say plainly and calmly that we don't do that, without arguing. "The team
 for a valid request we can't handle here. For a threat to anyone, staff included, also hand_off so the \
 staff know, but tell the customer only the plain no.
 - Waitlist: when the time they want is not free, offer to put them on the waitlist for that service and \
-day; only if they agree, call join_waitlist. If a slot opens they are offered it in this chat.
+day. Call join_waitlist with the service, day and time they want: the system then asks them to \
+confirm, saying how they would hear of a slot ({offered_how}).
 - An offer in this chat ("Offer OF-...") that they answer: call answer_offer with that reference and \
 whether they said yes; tell them what it returns. Their yes to the offer is their confirmation.
+- Who offers which service is exactly this, from the schedule: {team}. Name only these people for a \
+service, never anyone else, and do not guess what someone does.
+- To reach the business: {contact}. Give only these when someone needs to contact us; never make up \
+a phone number, email or address.
 - Never share anything about other customers.
 - Plain sentences, no markdown. Two or three sentences usually; a list goes in `items`."""
 
@@ -104,12 +109,33 @@ class AgentReply(BaseModel):
                                                "day'. Empty if none fit.")
 
 
+# How a waiting customer hears of a slot, told before they agree to wait: by their phone number, never
+# "keep this chat open" (waitlist/calls.py phones them; the offer also shows if they come back to the chat).
+OFFERED = "we will reach out to them on the contact number they gave"
+
+
+def _contact() -> str:
+    """How customers reach the business, exactly: its phone line (the number its assistant
+    answers), else the document's phone, and its email and address as the document gives them."""
+    from ..onboarding.phone import shown
+    from ..onboarding.store import live_phone  # imported here: onboarding imports this module's users
+
+    facts, line = get_knowledge().facts, live_phone()
+    parts = [f"phone {shown(line.number)}" if line else f"phone {facts['Phone']}" if facts.get("Phone") else "",
+             f"email {facts['Email']}" if facts.get("Email") else "",
+             f"address {facts['Address']}" if facts.get("Address") else ""]
+    return ", ".join(part for part in parts if part) or "the staff, through a hand-off"
+
+
 def instructions(name: str, phone: str, channel: str = "chat") -> str:
     """The agent's system prompt for this customer: the same on every turn
     (a conversation stays on one channel, "chat" or "voice")."""
     named = get_settings().assistant_name
     assistant = f"{named}, " if named else ""  # "You are Robin, the front-desk assistant ..."
-    text = INSTRUCTIONS.format(assistant=assistant, business=get_knowledge().name, name=name, phone=phone)
+    # Who offers what, exact: from the schedule (code), so the model never names the wrong person.
+    team = "; ".join(f"{person.name}: {', '.join(person.services)}" for person in get_schedule().staff_members.values())
+    text = INSTRUCTIONS.format(assistant=assistant, business=get_knowledge().name, name=name, phone=phone,
+                               offered_how=OFFERED, team=team or "no one yet", contact=_contact())
     return text + SPOKEN if channel == "voice" else text
 
 
@@ -129,11 +155,18 @@ MARKDOWN = re.compile(r"\*\*|__|`")  # bold and code marks
 def answer_text(reply: AgentReply) -> str:
     """The reply's answer as the chat shows it: plain sentences. Markdown a model
     wrote anyway (**bold**, list marks) is taken out; and a list belongs in `items`,
-    shown under the answer, so when the model also wrote it into the answer, those
-    lines are left out and the customer does not read the list twice."""
+    shown under the answer, so when the model also wrote it into the answer, as a
+    list or as plain lines naming its items, those lines are left out and the
+    customer does not read the list twice."""
     lines = reply.answer.splitlines()
+    if reply.suggestions:  # shown as buttons: not written out again, nor their "Suggestions:" label
+        offered = {s.strip().strip('"').lower() for s in reply.suggestions}
+        lines = [line for line in lines if line.strip().strip('"').lower() not in offered
+                 and line.strip().lower().rstrip(":") != "suggestions"]
     if reply.items:
-        lines = [line for line in lines if not LIST_LINE.match(line)]
+        named = [item.name.strip().lower() for item in reply.items if item.name.strip()]
+        lines = [line for line in lines if not LIST_LINE.match(line)
+                 and not any(line.strip().lower().startswith(name) for name in named)]
     else:
         lines = [LIST_LINE.sub("", line) for line in lines]
     return MARKDOWN.sub("", "\n".join(lines)).strip()
@@ -169,8 +202,9 @@ def read_details(message: str, asked: str = "") -> Details:
 
 
 def valid_phone(phone: str) -> bool:
-    """At least 7 digits, however written: the only check (numbers are not verified)."""
-    return len(digits(phone)) >= 7
+    """A number that can be dialled: ten digits (US, Canada), or "+" and the country code.
+    SmartDesk phones customers on it (a waitlist offer), so part of a number is not one."""
+    return dialable(phone) is not None
 
 
 # Offered to tap once the customer has given their details and not yet said what they want:
@@ -179,10 +213,15 @@ def valid_phone(phone: str) -> bool:
 STARTERS = ["What services do you offer?", "I'd like to book an appointment", "What are your opening hours?"]
 
 
-def ask_for(name: str, phone: str, caller: str = "") -> tuple[str, str]:
+def ask_for(name: str, phone: str, caller: str = "", partial: bool = False) -> tuple[str, str]:
     """(an opening, the question) for what is still missing, given what is known
     so far; the opening gives way to the reader's own warm reply when there is
-    one (flow.py identify). `caller` is the number calling, on a phone call."""
+    one (flow.py identify). `caller` is the number calling, on a phone call;
+    `partial`: they gave a number that is not a whole one (valid_phone)."""
+    if not phone and partial:
+        return (f"Thank you, {name}!" if name else "Thank you!"), \
+            ("Could you give your full phone number, with the area code? We use it to reach you about your "
+             "booking." + ("" if name else " And your name, please?"))
     if name and phone:
         return f"Thank you, {name}!", "How can I help you today?"
     if not name and caller and phone == caller:
@@ -214,7 +253,7 @@ def about_bookings(name: str, phone: str, spoken: bool) -> str:
 log = logging.getLogger("smartdesk.frontdesk")
 
 # Requests the graph runs itself (flow._hold): they may end in a question for the customer's yes.
-HELD = {"booking"}
+HELD = {"booking", "join_waitlist"}  # their result may wait for the customer's yes (flow._hold)
 # Tool -> the permission it needs. Every tool must be listed: one that is not is never offered.
 NEEDS = {"search_guide": "search_guide", "booking": "book", "record_feedback": "contact_staff",
          "hand_off": "contact_staff", "join_waitlist": "book", "answer_offer": "book"}
@@ -234,7 +273,7 @@ def search_guide(args: dict[str, Any]) -> dict[str, Any]:
 def booking_parameters() -> dict[str, Any]:
     """The booking tool's inputs, with the document's services and team. The day and
     the time are the customer's own words; code works out the date and times."""
-    schedule = read_schedule(get_knowledge())
+    schedule = get_schedule()
     return {"type": "object", "required": ["intent"], "properties": {
         "intent": {"type": "string", "enum": ["new", "change", "cancel", "my_bookings", "availability"],
                    "description": "new: they want to book. availability: they only ask when someone or "
@@ -277,8 +316,9 @@ def _to_staff(result: dict[str, Any], name: str, phone: str) -> dict[str, Any]:
 
 
 def booking(args: dict[str, Any], name: str, phone: str, words: str) -> dict[str, Any]:
-    """The booking tool: what is missing, the details to read back, or booking (code)'s answer.
-    Anything for the staff (beyond one booking, part of a package) is written down for them."""
+    """The booking tool: what is missing, or booking (code)'s answer: a plan held for the
+    customer's yes, openings to choose from, why nothing fits. Anything for the staff (beyond
+    one booking, part of a package) is written down for them."""
     desk = get_appointments()
     # Theirs only: no one else's booking can be named.
     upcoming = desk.upcoming(phone) if args.get("intent") in ("change", "cancel") else []
@@ -286,7 +326,7 @@ def booking(args: dict[str, Any], name: str, phone: str, words: str) -> dict[str
     hours = desk.schedule.hours.get(now.weekday())  # today's (opens, closes); None when closed today
     request, missing, unnamed = collect(args, words, now.date(), upcoming, now.time().replace(tzinfo=None),
                                         hours[1] if hours else None)
-    to = "Front Desk" if missing else "The yes" if request.intent in ("new", "change") else "Booking"
+    to = "Front Desk" if missing else "Booking"
     worked_out = brief(request.model_dump(exclude_defaults=True, exclude={"intent"}))
     note("Collect", to, f"{worked_out or 'nothing yet'} · " + (f"missing {', '.join(missing)}" if missing
                                                                 else "nothing missing"),
@@ -301,11 +341,12 @@ def booking(args: dict[str, Any], name: str, phone: str, words: str) -> dict[str
         result = describe(missing_result(request, missing, phone))
         # No service they named: the ones chosen for them are offered as choices, never used.
         return result | ({"options": unnamed} if "services" in missing and unnamed else {})
-    if request.intent in ("new", "change"):  # complete: the customer confirms the details first
-        # The customer's own words for the day and time go with it, for the read-back.
-        said = {"day": args.get("day_said", ""), "time": args.get("time_said", "")}
-        return {"status": "confirm_details", "request": request.model_dump(exclude_defaults=True), "said": said}
-    return _to_staff(describe(handle(request, phone)), name, phone)
+    result = _to_staff(describe(handle(request, phone)), name, phone)
+    if request.intent in ("new", "change"):
+        # What they asked for, as code read it and in their own words, for the question that holds
+        # a plan for their yes: a time they asked for that is taken is said (yes.checked).
+        result |= {"request": request.model_dump(exclude_defaults=True), "time_said": args.get("time_said", "")}
+    return result
 
 
 def handoff_reason(args: dict[str, Any], words: str) -> str:
@@ -326,9 +367,10 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
              search_guide),
         make_tool("booking",
              "Anything about bookings: a new booking, changing or cancelling one, their bookings, when someone "
-             "is free. Call it once you have every detail from the customer (for a booking: the service they "
-             "named, the day and the time), not for each one. The system then reads the details back to them "
-             "and shows the times found for their yes; anything else it answers, tell them in your words.",
+             "is free. Call it as soon as they name a service, with any day, time or staff member they said: "
+             "no day or time means the earliest openings. The system checks the calendar and asks them to "
+             "confirm a time it found; anything else it answers (openings to choose from, why nothing fits), "
+             "tell them in your words.",
              booking_parameters(),
              guarded(lambda args: booking(args, name, phone, words))),
         make_tool("record_feedback",
@@ -351,7 +393,7 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
     tools += [
         make_tool("join_waitlist",
              "Puts the customer on the waitlist for a service on a day, when the time they want is not free. "
-             "Call it only after they agreed to wait. If a slot opens, they are offered it in this chat.",
+             "Call it only after they agreed to wait. If a slot opens, we reach out on their contact number.",
              {"type": "object", "properties": {
                  "service": {"type": "string", "description": "The service's exact name, as the guide writes it."},
                  "day": {"type": "string", "description": "The day, as YYYY-MM-DD."},
@@ -360,7 +402,7 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
               "required": ["service", "day"]},
              guarded(lambda args: waitlist_join(args, name, phone))),
         make_tool("answer_offer",
-             "The customer's answer to a slot offered in this chat (\"Offer OF-...\"): yes books exactly that "
+             "The customer's answer to a slot offered to them (\"Offer OF-...\"), in this chat or on a call: yes books exactly that "
              "slot, no lets it go to the next customer waiting.",
              {"type": "object", "properties": {
                  "offer": {"type": "string", "description": "The offer's reference, e.g. OF-1A2B3C."},
@@ -372,8 +414,10 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
 
 
 def waitlist_join(args: dict[str, Any], name: str, phone: str) -> dict[str, Any]:
-    """join_waitlist, checked: a service the business offers, a real day, and times as HH:MM."""
-    schedule = read_schedule(get_knowledge())
+    """join_waitlist, checked: a service the business offers, a real day, and times as HH:MM.
+    Nobody is added here: the request is held for the customer's yes (flow._offer), and
+    joined once they say it (join_now)."""
+    schedule = get_schedule()
     service = str(args.get("service") or "").strip()
     if service not in schedule.services:
         return {"error": f"There is no service called {service!r}; use the guide's exact name."}
@@ -383,5 +427,13 @@ def waitlist_join(args: dict[str, Any], name: str, phone: str) -> dict[str, Any]
         before = time.fromisoformat(args["before"]) if args.get("before") else None
     except ValueError:
         return {"error": "The day must be YYYY-MM-DD and times HH:MM."}
-    entry = join(name, phone, service, day, after, before)
-    return {"waiting": True, "service": service, "day": entry["day"]}
+    return {"status": "waitlist_ready", "waitlist": {
+        "service": service, "day": day.isoformat(), "after": after.strftime("%H:%M") if after else "",
+        "before": before.strftime("%H:%M") if before else ""}}
+
+
+def join_now(waitlist: dict[str, str], name: str, phone: str) -> dict[str, Any]:
+    """Add the customer to the waitlist they said yes to (`waitlist`, as waitlist_join held it)."""
+    clock = {key: time.fromisoformat(waitlist[key]) if waitlist.get(key) else None for key in ("after", "before")}
+    entry = join(name, phone, waitlist["service"], date.fromisoformat(waitlist["day"]), clock["after"], clock["before"])
+    return {"waiting": True, **waitlist, "entry": entry["id"]}

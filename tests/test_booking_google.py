@@ -86,6 +86,10 @@ class FakeApi:
             return Request(run)
 
         def list_(calendarId, singleEvents, pageToken=None, timeMin=None, timeMax=None, privateExtendedProperty=None):
+            if calendarId not in self.stored:  # deleted, or never there: Google answers 404
+                def gone():
+                    raise HttpError(SimpleNamespace(status=404, reason="Not Found"), b"")
+                return Request(gone)
             key, _, value = (privateExtendedProperty or "").partition("=")
             found = self.stored[calendarId]
             if timeMin:
@@ -228,3 +232,28 @@ def test_a_day_off_blocks_the_day_and_an_event_marked_free_does_not(api, desk):
     dev(api).append({"id": "note", "summary": "Reminder", "transparency": "transparent",
                        "start": {"dateTime": at("10:00").isoformat()}, "end": {"dateTime": at("11:00").isoformat()}})
     assert "10:00" in [s.start.strftime("%H:%M") for s in desk.free_slots("Prenatal Massage", FRIDAY)]
+
+
+
+def test_reset_deletes_this_business_s_bookings_and_keeps_its_calendars():
+    from smartdesk.booking.calendars.google import delete_bookings
+
+    api = FakeApi({calendar_name("Test Studio", "Dev Patel"): "cal-1",
+                   "Test Studio – Dev Patel": "cal-other-app",  # another app's calendar for the same business
+                   calendar_name("Another Studio", "Jo Lin"): "cal-other-business"})
+    for cid in api.stored:
+        api.stored[cid].append({"id": f"event-{cid}", "summary": "a booking"})
+    assert delete_bookings(api, "Test Studio") == 1
+    assert api.stored["cal-1"] == [] and calendar_name("Test Studio", "Dev Patel") in api.names  # kept, empty
+    assert api.stored["cal-other-app"] and api.stored["cal-other-business"]  # untouched
+
+
+
+def test_a_calendar_deleted_since_is_read_again_not_a_failure():
+    # As seen live: the server kept a staff calendar id deleted since, and every lookup of the
+    # customer's bookings failed ("Not Found"), so a cancellation could not be done.
+    api = FakeApi({calendar_name("Test Studio", name): f"cal-{n}" for n, name in enumerate(team())})
+    stale = {name: f"cal-{n}" for n, name in enumerate(team())} | {"Dev Patel": "cal-deleted"}
+    calendar = GoogleCalendar(api, stale, SPA)
+    assert calendar.bookings(datetime(2026, 10, 23, tzinfo=SPA), datetime(2026, 10, 24, tzinfo=SPA)) == []
+    assert calendar.calendars["Dev Patel"] != "cal-deleted"  # the list was read again

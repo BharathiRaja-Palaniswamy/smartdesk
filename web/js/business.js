@@ -1,9 +1,11 @@
-/* Step 1: the business basics. Name, type and hours are required. */
+/* Step 1: the business basics. Name, type and phone are required: the phone number
+   is the one customers call, which the assistant answers (D37). Opening hours are
+   not asked: they are read from the business's documents (onboarding/booking.py). */
 
 (() => {
   const form = document.getElementById("business-form");
   const error = document.getElementById("business-error");
-  const required = { name: "the business name", kind: "the type of business", hours: "your opening hours" };
+  const required = { name: "the business name", kind: "the type of business", phone: "your business phone number" };
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();

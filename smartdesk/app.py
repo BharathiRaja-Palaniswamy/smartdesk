@@ -48,6 +48,7 @@ from .reports.routes import page_router as manage_page
 from .reports.routes import router as report_router
 from .tracing import setup as setup_tracing
 from .voice.routes import router as phone_line
+from .waitlist.routes import keypad as offer_answers
 from .waitlist.routes import router as offers
 from .widget.routes import router as widget
 
@@ -56,7 +57,7 @@ WEB = Path(__file__).parent.parent / "web"  # the landing page, onboarding, the 
 setup_tracing()  # before any request: hides personal details in every trace (tracing.py)
 app = FastAPI(title="SmartDesk")
 for router in (manage_page, report_router, owner_chat, owner_sign_in, front_desk, feedback_cards, phone_line, widget,
-               onboarding, offers):
+               onboarding, offers, offer_answers):
     app.include_router(router)
 
 

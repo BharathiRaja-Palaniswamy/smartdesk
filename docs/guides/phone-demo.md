@@ -53,7 +53,28 @@ Start SmartDesk with `SMARTDESK_PHONE_NUMBER` set to that Twilio number, written
 "+14155550123". Onboarding's phone step then offers phone support and gives
 this line (D32); without it, the step offers only the website chat.
 
-## 5. Check
+## 5. Set up at Go live, through the API (D36)
+
+SmartDesk makes the business's own ElevenLabs agent and attaches the number
+when the owner chooses phone support and clicks Go live
+(`smartdesk/onboarding/phone.py`). It needs, in `.env`:
+
+| Setting | What |
+|---|---|
+| `ELEVENLABS_API_KEY` | a key with **ElevenAgents: Write** |
+| `SMARTDESK_PHONE_NUMBER` | the number customers call, "+19255550100" |
+| `SMARTDESK_VOICE_PHONE_NUMBER_ID` | that number's id in ElevenLabs (Phone Numbers page) |
+| `SMARTDESK_VOICE_SECRET` | the secret the agent sends SmartDesk on every turn |
+| `SMARTDESK_PUBLIC_URL` | where ElevenLabs reaches this app: the tunnel's address |
+| `SMARTDESK_VOICE_ID` | optional: the voice the agent speaks with |
+
+The same agent phones waitlisted customers when a slot opens, while the
+business is open. Reset gives the number back to the agent it had before,
+then deletes SmartDesk's agent and secret. Each call costs Twilio and
+ElevenLabs minutes; on a Twilio trial account, only verified numbers can be
+called.
+
+## 6. Check
 
 Call the number and ask "What time do you open on Sunday?", then book a
 service. The calls appear in SmartDesk's log as `POST /v1/chat/completions`;

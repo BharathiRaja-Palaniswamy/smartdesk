@@ -18,10 +18,10 @@ in this server's memory, so a restart starts every conversation afresh.
 The steps (plain functions: the state in, what changed out):
   identify  name and phone first (agent.py reads them)
   agent     one call to the agent: a reply, or tool requests
-  tools     runs them; a booking request with all its details is read back
-            for the customer's yes (yes.py), a cancellation held for theirs
-  decide    their answer: yes to the details -> booking.py finds times, held
-            for a second yes; yes to a plan or cancellation -> executor.py;
+  tools     runs them; a plan booking (code) found, or a cancellation, is held
+            for the customer's yes (yes.py), asked in one question that says
+            what the check found ("16:00 is taken")
+  decide    their answer: yes to a plan or cancellation -> executor.py;
             anything else back to the agent with their reply
   give_up   too many rounds or repeats: the staff take over (staff.py)
 AgentState, what a conversation remembers, is defined here too.
@@ -47,15 +47,15 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
 from ..frontdesk import executor as approved
-from ..booking.actions import guarded
 from ..booking.appointments import digits
 from ..models import run_requests, structured
 from ..privacy import remember
-from .booking import BookingRequest, Plan, describe, handle
+from .booking import Plan
 from .debug import brief, note, outcome
 from .details import customer_words
 from .agent import (
     HELD,
+    join_now,
     STARTERS,
     AgentReply,
     about_bookings,
@@ -65,9 +65,10 @@ from .agent import (
     read_details,
     valid_phone,
 )
-from .rules import CLAIMS_DONE, MAX_REPEATS, MAX_TOOL_ROUNDS, NOT_DONE, AGENT_MODEL
+from .rules import (A_TIME, AGENT_MODEL, ASKS_TO_CONFIRM, CHECK_FIRST, CLAIMS_DONE, MAX_REPEATS, MAX_TOOL_ROUNDS,
+                    NOT_DONE, plain_quotes)
 from .staff import HANDOVER, record_handoff
-from .yes import cancel_question, details_question, done_message, is_yes, plan_question
+from .yes import cancel_question, checked, done_message, is_yes, plan_question, waitlist_question
 
 
 @lru_cache  # one graph, and so one memory, for the whole server
@@ -144,15 +145,20 @@ DETAILS_WORDS = {"my", "name", "names", "is", "im", "i", "am", "this", "it", "it
                  "and", "the", "call", "me", "you", "can", "reach", "on", "at", "s", "m", "mobile", "cell"}
 
 
+# A sentence that asks for their details ("Please provide your name and phone number"): code's to ask.
+ASKS_DETAILS = re.compile(r"\b(name|phone|number|contact)\b", re.IGNORECASE)
+
+
 def _warm_word(reply: str, said: str, name: str) -> str:
     """The reader's warm sentences back to what the customer said, or "" when they said
-    nothing beyond their name and number. Never a question, nor a number: the questions
-    are code's (ask_for), and their details are not read back to them here."""
+    nothing beyond their name and number. Never a question, a request for their details,
+    nor a number: asking is code's (ask_for), and their details are not read back here."""
     words = set(re.findall(r"[a-z]+", said.lower())) - set(re.findall(r"[a-z]+", name.lower())) - DETAILS_WORDS
     if not words:
         return ""
     sentences = re.findall(r"[^.!?]+[.!?]*", reply)
-    return " ".join(part.strip() for part in sentences if not part.strip().endswith("?") and not re.search(r"\d", part))
+    return " ".join(part.strip() for part in sentences if not part.strip().endswith("?") and not re.search(r"\d", part)
+                    and not ASKS_DETAILS.search(part))
 
 
 def identify(state: AgentState) -> dict:
@@ -189,7 +195,9 @@ def identify(state: AgentState) -> dict:
         return {**known, "held": False, "say": question, "messages": [AIMessage(question)]}
     # A warm word back to what they said (the reader's, in place of code's opening), then what is
     # still missing (code's).
-    opening, question = ask_for(name, phone, caller)
+    # A number they wrote (not one the reader made up), but not a whole one: asked for in full.
+    partial = bool(digits(details.phone)) and digits(details.phone) in digits(said) and not given
+    opening, question = ask_for(name, phone, caller, partial)
     say = f"{_warm_word(details.reply, said, name) or opening} {question}".strip()
     # Both given and nothing asked yet: "How can I help?" comes with a few things to tap.
     offered = STARTERS if name and phone else []
@@ -224,10 +232,20 @@ def _done_this_turn(messages: list) -> bool:
     return False
 
 
+def _asks_to_confirm(answer) -> bool:
+    """Whether the reply asks the customer to confirm a booking at a time itself, rather
+    than having it checked (rules.py, 3: the confirmation is code's question)."""
+    if answer.reply is None or answer.tool_calls:
+        return False
+    text = plain_quotes(answer.reply.answer)
+    return bool(ASKS_TO_CONFIRM.search(text) and A_TIME.search(text))
+
+
 def _untrue(answer, state: AgentState) -> bool:
     """Whether the reply says something was done that no tool did this turn, nor a
     replaced turn the customer never saw the reply of (rules.py, 3)."""
-    return (answer.reply is not None and not answer.tool_calls and bool(CLAIMS_DONE.search(answer.reply.answer))
+    return (answer.reply is not None and not answer.tool_calls
+            and bool(CLAIMS_DONE.search(plain_quotes(answer.reply.answer)))
             and not _done_this_turn(state["messages"]) and not state.get("untold"))
 
 
@@ -239,6 +257,10 @@ def agent(state: AgentState) -> dict:
     messages = [SystemMessage(rules), *state["messages"]]
     # After a repeated request, the model must answer now: asked again with tools, it tends to repeat again.
     answer = structured(AGENT_MODEL, messages, AgentReply, offered, answer_now=state.get("repeats", 0) > 0)
+    if _asks_to_confirm(answer):
+        # The yes is code's question, after the check (rules.py, 3): told to check, so it is asked once.
+        note("The yes", "Front Desk", "asked for a yes itself: told to check first", answer.reply.answer)
+        answer = structured(AGENT_MODEL, [*messages, SystemMessage(CHECK_FIRST)], AgentReply, offered)
     if _untrue(answer, state):
         note("The yes", "Front Desk", "said something was done that was not: asked again", answer.reply.answer)
         answer = structured(AGENT_MODEL, [*messages, SystemMessage(NOT_DONE)], AgentReply, offered)
@@ -270,17 +292,22 @@ def after_agent(state: AgentState) -> str:
 
 
 def _offer(result: dict, request: dict, state: AgentState) -> dict:
-    """The state that asks the customer to approve booking (code)'s plan or
-    cancellation; {} when `result` is neither."""
+    """The state that asks the customer to approve booking (code)'s plan, a
+    cancellation, or joining the waitlist; {} when `result` is none of them."""
     spoken = state.get("channel") == "voice"
     if result.get("status") == "plan_ready":
-        question = plan_question(Plan.model_validate(result["plan"]), state["name"], state["phone"], spoken,
-                                 result.get("replaces"))
+        plan = Plan.model_validate(result["plan"])
+        # What the check found about the time they asked for (the booking tool sends both).
+        question = checked(result.get("request") or {}, result.get("time_said", ""), plan, spoken) + plan_question(
+            plan, state["name"], state["phone"], spoken, result.get("replaces"))
         replaces = (result.get("replaces") or {}).get("reference", "")
         held = {"kind": "plan", "plan": result["plan"], "replaces": replaces}
     elif result.get("status") == "cancel_ready":
         question = cancel_question(result["cancel"], spoken)
         held = {"kind": "cancel", "references": [booking["reference"] for booking in result["cancel"]]}
+    elif result.get("status") == "waitlist_ready":
+        question = waitlist_question(result["waitlist"], state["phone"], spoken)
+        held = {"kind": "waitlist", "waitlist": result["waitlist"]}
     else:
         return {}
     keep = {key: request[key] for key in ("name", "args", "id")}
@@ -289,27 +316,16 @@ def _offer(result: dict, request: dict, state: AgentState) -> dict:
 
 
 def _hold(request: dict, state: AgentState, results: list) -> dict:
-    """Run a booking request. Complete details for a new booking or a change are
-    held, and read back to the customer to confirm before booking (code) looks
-    for times; a cancellation is held for the customer's yes. Anything else (what
-    is missing, the days that work, their bookings) goes back to the model, added
-    to `results`. Returns the state to change."""
+    """Run a booking request. A plan booking (code) found, or a cancellation, is held
+    for the customer's yes, asked in one question. Anything else (what is missing,
+    the openings to choose from, why nothing fits, their bookings) goes back to the
+    model, added to `results`. Returns the state to change."""
     [answer] = run_requests([request], _offered(state))
     result = json.loads(answer.content)
-    if result.get("status") == "confirm_details":
-        question = details_question(result["request"], result["said"], state.get("channel") == "voice")
-        note("The yes", "Customer", question, {"waits for a yes to": "details"})
-        return {"pending": {**request, "kind": "details", "request": result["request"], "question": question},
-                "say": question, "confirming": True}
     if offer := _offer(result, request, state):
         return offer
     results.append(answer)
     return {}
-
-
-def _look_for_times(pending: dict, phone: str) -> dict:
-    """Booking (code)'s answer to the details the customer confirmed."""
-    return guarded(lambda request: describe(handle(BookingRequest.model_validate(request), phone)))(pending["request"])
 
 
 def _key(request: dict) -> str:
@@ -375,10 +391,8 @@ def after_tools(state: AgentState) -> str:
 def decide(state: AgentState) -> dict:
     """The customer's answer to what is waiting for their yes.
 
-    Yes to the details: booking (code) looks for times; a plan it offers
-    is held for a second yes (the turn ends asking it). Yes to a plan or a
-    cancellation: it is carried out. Either way the model is told what
-    happened, in the request's result. After a yes, the customer's words go
+    Yes to a plan or a cancellation: it is carried out, and the model is
+    told what happened, in the request's result. After a yes, the customer's words go
     only into that result: passed on as a new message, a "yes, book it"
     would read as a new request. After anything else, nothing is done and
     their reply is passed on, since it may ask for something else."""
@@ -389,31 +403,28 @@ def decide(state: AgentState) -> dict:
     start = next(n for n, m in enumerate(state["messages"])
                  if any(call["id"] == pending["id"] for call in getattr(m, "tool_calls", None) or []))
     since = state["messages"][start + 1:]
-    acted = is_yes(said.text)  # a yes asks for times, books or cancels: something that really happens
-    to = {"details": "Booking", "plan": "Executor", "cancel": "Approved"}[pending["kind"]] if acted else "Front Desk"
+    acted = is_yes(said.text)  # a yes books or cancels: something that really happens
+    to = {"plan": "Executor", "cancel": "Approved", "waitlist": "Waitlist"}[pending["kind"]] if acted else "Front Desk"
     note("Customer", "The yes", f'"{said.text}": ' + ("yes" if acted else "not a yes, so nothing is done"),
          {"to": pending["question"]})
     note("The yes", to, f"go ahead with the {pending['kind']}" if acted else "their reply goes back to the agent")
     update: dict = {"asked": [*(state.get("asked") or []), _key(pending)]}  # not asked for again this turn
-    if acted and pending["kind"] == "details":
-        result = _look_for_times(pending, state["phone"])
-        if offer := _offer(result, pending, state):
-            return {**update, **offer}  # the plan waits for its own yes; the request still has no result
     if acted and pending["kind"] == "plan":
         result, failed = approved.book(pending["plan"], pending["replaces"], state["name"], state["phone"],
                                        state.get("failed_plans", 0))
         update["failed_plans"] = failed
     if acted and pending["kind"] == "cancel":
         result = approved.cancel(pending["references"], state["phone"])
+    if acted and pending["kind"] == "waitlist":
+        result = join_now(pending["waitlist"], state["name"], state["phone"])
     removed = [RemoveMessage(id=message.id) for message in since]
     if acted:
-        note("Executor" if pending["kind"] == "plan" else "Approved" if pending["kind"] == "cancel"
-             else "Booking", "Front Desk", outcome(result), result)
+        note(to, "Front Desk", outcome(result), result)
         told = {"customer_said_yes_to": pending["question"], "customer_said": said.text, "result": result}
-        update |= {"pending": None, "acted": pending["kind"] != "details"}
+        update |= {"pending": None, "acted": True}
         # What was done is told by code, as the question was (rules.py, 3): the references and
         # times exactly as booked. What was not done goes to the agent to explain.
-        if pending["kind"] != "details" and (say := done_message(result, state.get("channel") == "voice")):
+        if say := done_message(result, state.get("channel") == "voice"):
             note("The yes", "Customer", say, result)
             return {**update, "say": say, "messages": [
                 *removed, ToolMessage(json.dumps(told), tool_call_id=pending["id"]), AIMessage(say)]}

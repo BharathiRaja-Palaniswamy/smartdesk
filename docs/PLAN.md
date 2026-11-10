@@ -131,7 +131,7 @@ flowchart TD
   U --> X[3 Extract text per page<br/>Claude for images and scans]
   X --> R[4 Hide personal details]
   R --> S[5 Sections]
-  S --> T[Services table, after the demo<br/>strict schema · normalise · validate]
+  S --> T[Booking facts D35<br/>services · team · hours, checked]
   S --> P[(Pinecone<br/>business's namespace)]
   T --> Q[(Business's database)]
   S --> K[6 Safety check<br/>harmful content · text written to an assistant]
@@ -147,9 +147,10 @@ flowchart TD
   written to an AI assistant. Each finding quotes the document; any finding
   blocks going live, and the owner fixes the document and uploads it again.
   While it works, one plain line says what is happening.
-- Booking from any format (after the demo): a services table read from the
-  documents, every value checked by code against the service's own passage;
-  a value the document does not state is left empty, never guessed.
+- Booking from any layout (D35): the services, team and opening hours are
+  read at onboarding, by code from SmartDesk's layout or by a model from any
+  other, every value checked by code against the document; a value the
+  document does not state is left out, never guessed.
 - **Go live** is the final step: it issues the widget key, sets up the phone
   line (after the owner agrees to its monthly cost; optional) and checks the
   calendar, all or nothing.
@@ -223,7 +224,7 @@ in shared tables. The app resolves the business, then opens only that cell.
 | Documents | same database + `data/businesses/<id>/files/` | originals on disk; name, fingerprint, who authorized it, status |
 | Sections | same database | redacted text of each section with its document and page; the source of what is indexed |
 | Search index | Pinecone namespace `<id>` | one entry per section, tagged with its document |
-| Services table | same database | service, options (duration, price), staff, the quote behind each value (after the demo) |
+| Booking schedule | same database (demo build: `schedule.json`) | services with lengths and prices, the team's days and services, opening hours (D35) |
 | Waitlist, offers | same database | customer, service, time window, consent; slot, sent, expires, outcome |
 | Hand-offs, feedback, unanswered questions | same database | |
 | Secrets | secret store, per business | calendar credentials, phone and voice-agent ids |
@@ -409,6 +410,12 @@ after the turn, to everyone when switched on) and rebuilt this way in M0.
 | D31 | What onboarding does with the documents | summarise and ask the owner to confirm and answer questions · take them as they are and check only that they are safe | **Decided: as they are, safety only**: clean what a page could run (code), then one model call per part for harmful content and text written to an assistant, plus code phrases; findings must quote the document; any finding blocks going live (the server refuses), owner re-uploads; generic progress lines; no questions about the business |
 | D32 | Phone support at onboarding | buy a Twilio number per business now · demo mode now, buying after; numbers in the owner's Twilio account · in SmartDesk's, a subaccount per business | **Decided: demo mode now** (the number SMARTDESK_PHONE_NUMBER names, nothing bought; the cost shown and agreed to as it will be), **SmartDesk's Twilio account with a subaccount per business** after the demo; the owner keeps their number and forwards calls to the line |
 | D33 | The owner's preview after going live | the simulator's sandbox (D26) · the live assistant | **Decided: the live assistant for the demo**: `/web/preview.html` shows the business's name with its widget added as its snippet adds it; each tab is a new customer, so the empty chair can be tried with two tabs; bookings are real and the page says so. The simulator's sandbox (D26) stays for admin and later owner use |
+| D34 | Who is offered a cancelled slot, and how they hear | first-come · ranked; chat only · SMS · a phone call | **Decided: ranked** (exact time, then window, then any time; fewer missed offers; longest wait), hold following how soon the slot is; **the agent phones the chosen customer** (ElevenLabs outbound call through the business's Twilio number), since US SMS needs days of carrier registration. Staff preference and no-show history are not recorded yet, so not ranked on |
+| D35 | Booking from documents in any layout | Markdown layout only · a model reads any layout, code checks | **Proposed, built for review**: exact first: SmartDesk's layout is read by code; any other layout by one model call at onboarding, every value checked against the document (each length and price its own number in the service's passage; names and hours written in it); unbacked values left out and reported; no staff named -> one Team calendar; kept as `schedule.json`, read through one `get_schedule()` |
+| D36 | Phone agents | one shared ElevenLabs agent · one per business | **Decided: one per business, made by SmartDesk through the API at Go live** (secret, agent from a template, number attached; reset gives the number back and deletes the rest); all agents call the same SmartDesk endpoint. The business keeps its number: call forwarding by default; porting or SIP on request; its own number as verified caller ID for waitlist calls (after the demo). Telling businesses apart on one endpoint comes with cells (M2) |
+| D37 | Phone support at onboarding | a step asking the owner, with a cost to agree to · by default | **Decided: by default** (replaces D32's step): the line is the business's own number from step 1 (required), set up at Go live; no new number and no monthly fee, only call minutes; if the phone cannot be set up the website chat still goes live and the owner is told why. Step 1 no longer asks for opening hours: they come from the documents |
+| D38 | Booking rules (strict) | read the details back, then the plan (two yeses) · check at once, one question | **Decided: check at once, one yes**: a service alone gets the earliest openings to choose from; a day without a time the earliest time that day; one time asked for is checked and the question says "16:00 is free" or "16:00 is taken" before offering another; a part of the day stays in that window, and other days' openings are in the same window (mornings for a morning). Also strict: text read with plain quotes; a phone number must be a whole one; claims of a booking (past or under way) only when code made it; asking for details is code's |
+| D39 | How a waitlisted customer is offered a slot by phone | the AI agent calls and talks · a keypad call | **Decided: a keypad call** (Twilio, no AI): the offer is read, 1 books exactly that slot, 2 lets it go and the next customer is called; the slot is never moved to anyone without their 1. Needs TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN; only waiters with a whole phone number are offered a slot |
 | D18 | Calendars in v1 | Google Calendar only · booking-system connectors (Square, Fresha, Vagaro, Mindbody) | **Decided: Google Calendar only**, one calendar per staff member, behind the existing calendar interface (`booking/calendars/base.py`) so a connector is a new file, not a rewrite |
 | D15 | Onboarding v1 scope | Full owner review with an Onboarding agent · documents straight to search with an editable services table | **Decided: documents straight to search; services table shown and editable; no recordings** |
 

@@ -53,10 +53,9 @@ class Settings:
 
     data_path: Path | None  # the business document the assistants answer from; None when not set
     business_folder: Path  # where the onboarded business's document and phone line are kept
-    offer_minutes: int  # slot recovery: how long a cancelled slot is held for the waiter offered it
+    offer_minutes: int  # slot recovery: the longest a cancelled slot is held for the waiter offered it (choose.py)
     widget_key: str  # the key the business's chat widget is pasted with (demo build: one business)
     assistant_name: str  # the name the customer chat's assistant gives itself, e.g. "Robin"; "" for none
-    phone_number: str  # demo build: the line given to an owner who asks for phone support (D32); "" for none
     eval_set_path: Path | None  # the business's golden eval set (evals/); None when not set
     report_data_path: Path | None  # the bookings JSON the report dashboard reads; None when not set
     timezone: str  # the business's time zone, used to tell the assistant the current time
@@ -87,7 +86,14 @@ class Settings:
     google_service_account: str = field(repr=False)  # booking: the service account's key, as JSON text or a file path
     calendar_owner: str  # booking: a Google account the calendars are shared with, to see them; "" for none
     voice_secret: str = field(repr=False)  # phone line: the secret ElevenLabs sends; "" switches the line off
-    voice_agent_id: str  # the ElevenLabs agent the manage page's phone-line test talks to; "" hides the test
+    voice_agent_id: str  # the ElevenLabs agent: the manage page's phone-line test, and calls to waitlisted customers
+    elevenlabs_api_key: str = field(repr=False)  # sets up phone lines (onboarding/phone.py); "" means none
+    twilio_account_sid: str  # places the keypad calls to waitlisted customers (waitlist/calls.py); "" means none
+    call_any_time: bool  # waitlist calls also outside opening hours (for testing); off: only while open
+    call_voice: str  # the voice Twilio reads waitlist calls in: a natural, neural one
+    twilio_auth_token: str = field(repr=False)
+    public_url: str  # where ElevenLabs reaches this app ("https://..."), for a business's agent; "" means no phone lines
+    voice_id: str  # the ElevenLabs voice a business's agent speaks with; "" for ElevenLabs' default
     owner_password: str = field(repr=False)  # the manage page's sign-in; "" keeps the owner's pages closed
     session_secret: str = field(repr=False)  # signs the owner's sign-in cookie; "" uses a random key per start
 
@@ -106,10 +112,9 @@ def get_settings() -> Settings:
     return Settings(
         data_path=_path("SMARTDESK_DATA"),
         business_folder=Path(os.getenv("SMARTDESK_BUSINESS_FOLDER", ROOT / "storage" / "business")),
-        offer_minutes=int(os.getenv("SMARTDESK_OFFER_MINUTES", "15")),
+        offer_minutes=int(os.getenv("SMARTDESK_OFFER_MINUTES", "60")),
         widget_key=os.getenv("SMARTDESK_WIDGET_KEY", ""),
         assistant_name=os.getenv("SMARTDESK_ASSISTANT_NAME", ""),
-        phone_number=os.getenv("SMARTDESK_PHONE_NUMBER", "").strip(),
         eval_set_path=_path("SMARTDESK_EVAL_SET"),
         report_data_path=_path("SMARTDESK_REPORT_DATA"),
         timezone=os.getenv("SMARTDESK_TIMEZONE", "America/Los_Angeles"),
@@ -142,6 +147,13 @@ def get_settings() -> Settings:
         calendar_owner=os.getenv("SMARTDESK_CALENDAR_OWNER", ""),
         voice_secret=os.getenv("SMARTDESK_VOICE_SECRET", ""),
         voice_agent_id=os.getenv("SMARTDESK_VOICE_AGENT_ID", ""),
+        elevenlabs_api_key=os.getenv("ELEVENLABS_API_KEY", ""),
+        twilio_account_sid=os.getenv("TWILIO_ACCOUNT_SID", "").strip(),
+        call_any_time=os.getenv("SMARTDESK_CALL_ANY_TIME", "false").lower() == "true",
+        call_voice=os.getenv("SMARTDESK_CALL_VOICE", "Polly.Joanna-Neural").strip(),
+        twilio_auth_token=os.getenv("TWILIO_AUTH_TOKEN", "").strip(),
+        public_url=os.getenv("SMARTDESK_PUBLIC_URL", "").strip(),
+        voice_id=os.getenv("SMARTDESK_VOICE_ID", "").strip(),
         owner_password=os.getenv("SMARTDESK_OWNER_PASSWORD", ""),
         session_secret=os.getenv("SMARTDESK_SESSION_SECRET", ""),
     )

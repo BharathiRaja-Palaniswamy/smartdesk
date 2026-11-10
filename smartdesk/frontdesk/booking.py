@@ -27,8 +27,11 @@ but exact rules. It keeps no memory: the same request gets the same answer.
     my_bookings   the bookings on their number
     cancel        the bookings, checked against the notice rule; part of a
                   package goes to the staff
-    availability  the free times on a day, or with no day, the days that fit
-    new / change  fit_plan: the services one after another on the day
+    availability  the free times on a day, or with no day, the earliest openings
+    new / change  with no day, the earliest openings to choose from; with a
+                  day, fit_plan: the services one after another, earliest first
+                  within the times asked for; when nothing fits, openings in
+                  the same times on the next days (a morning: other mornings)
 
 The Plan is here too: what is approved and booked, the check that it can
 still be booked (check_plan), and how services are fitted into a day.
@@ -79,7 +82,7 @@ def _slot(desk: Appointments, item: PlanItem, ignoring: Booking | None = None) -
 
 def _label(item: PlanItem) -> str:
     """'Prenatal Massage with Dev Patel at Fri 30 Oct 15:00'."""
-    return f"{item.service} with {item.staff_member} at {item.start:%a %d %b %H:%M}"
+    return f"{item.service} with {item.staff_member} at {item.start:%a %d %b} {twelve(item.start)}"
 
 
 def check_plan(plan: Plan, desk: Appointments, ignoring: Booking | None = None) -> list[str]:
@@ -102,8 +105,8 @@ def check_plan(plan: Plan, desk: Appointments, ignoring: Booking | None = None) 
     ordered = sorted(slots, key=lambda slot: slot.start)
     for before, after in zip(ordered, ordered[1:]):
         if after.start < before.end:
-            problems.append(f"{after.start:%H:%M} starts before the appointment at {before.start:%H:%M} ends "
-                            f"({before.end:%H:%M}): one customer can't have both at once.")
+            problems.append(f"{twelve(after.start)} starts before the appointment at {twelve(before.start)} ends "
+                            f"({twelve(before.end)}): one customer can't have both at once.")
     return problems
 
 
@@ -178,6 +181,13 @@ def days_that_fit(services: Sequence[str], desk: Appointments, after: time | Non
 log = logging.getLogger("smartdesk.frontdesk")
 
 
+def twelve(moment: datetime | time) -> str:
+    """A time as customers say it: "2 PM", "2:30 PM" (never "14:00"). Every time
+    the customer is told, or the agent is given to tell, is written this way."""
+    hour = moment.hour % 12 or 12
+    return f"{hour}{f':{moment.minute:02d}' if moment.minute else ''} {'PM' if moment.hour >= 12 else 'AM'}"
+
+
 class BookingRequest(BaseModel):
     """What the customer wants, cleaned up by the agent: everything said so far."""
 
@@ -220,13 +230,24 @@ def _staff_members(request: BookingRequest, desk: Appointments) -> dict[str, str
     return {name: request.staff_member for name in request.services if name in offers}
 
 
-def _days(services: list[str], desk: Appointments, request: "BookingRequest | None" = None,
-          skip: date | None = None) -> list[str]:
-    """The next days on which every service has a free time: within the request's
-    times and with its staff member, when there is a request."""
-    if request is None:
-        return days_that_fit(services, desk)
-    return days_that_fit(services, desk, _clock(request.after), _clock(request.before), _staff_members(request, desk), skip)
+def openings(services: Sequence[str], desk: Appointments, after: time | None = None, before: time | None = None,
+             staff_members: dict[str, str] | None = None, skip: date | None = None) -> list[str]:
+    """The earliest time `services` fit, one after another, on each of the next days that
+    have one (at most MAX_DAYS): "Friday 13 November at 10:00 with Priya Nair". Within
+    the times asked for (`after`, `before`), so a morning request is offered mornings."""
+    found = []
+    for listed in days_that_fit(services, desk, after, before, staff_members, skip):
+        day = date.fromisoformat(listed.split()[-1])
+        plan = fit_plan(services, day, desk, after, before, staff_members)
+        if isinstance(plan, Plan):
+            first = plan.items[0]
+            found.append(f"{day:%A} {day.day} {day:%B} at {twelve(first.start)} with {first.staff_member}")
+    return found
+
+
+def _openings(services: list[str], desk: Appointments, request: "BookingRequest", skip: date | None = None) -> list[str]:
+    """The openings within the request's times, with its staff member."""
+    return openings(services, desk, _clock(request.after), _clock(request.before), _staff_members(request, desk), skip)
 
 
 def _window(request: "BookingRequest") -> str:
@@ -237,7 +258,7 @@ def _window(request: "BookingRequest") -> str:
 
 
 def _times(slots: list[Slot]) -> str:
-    return ", ".join(f"{s.start:%H:%M} with {s.staff_member}" for s in slots[:6])
+    return ", ".join(f"{twelve(s.start)} with {s.staff_member}" for s in slots[:6])
 
 
 def _availability(request: BookingRequest, day: date, desk: Appointments) -> BookingResult:
@@ -255,7 +276,7 @@ def _availability(request: BookingRequest, day: date, desk: Appointments) -> Boo
         options.append(f"{name} on {day:%A %d %B}: no free times" + (f" {window}" if window else ""))
         if window and (other := _free(desk, name, day, staff_member, None, None, None)):
             options.append(f"{name} on {day:%A %d %B} at other times: {_times(other)}")
-        if later := _days([name], desk, request, skip=day):
+        if later := _openings([name], desk, request, skip=day):
             options.append(f"{name} on other days" + (f", {window}" if window else "") + f": {', '.join(later)}")
     return BookingResult(status="options", options=options)
 
@@ -265,15 +286,16 @@ def _open(day: date, desk: Appointments) -> str:
     and nothing to guess: 'We are open 10:00 to 20:30 on Thursdays.'"""
     if (hours := desk.schedule.hours.get(day.weekday())) is None:
         return f"We are closed on {day:%A}s."
-    return f"We are open {hours[0]:%H:%M} to {hours[1]:%H:%M} on {day:%A}s."
+    return f"We are open {twelve(hours[0])} to {twelve(hours[1])} on {day:%A}s."
 
 
 def _plan(request: BookingRequest, desk: Appointments, replaces: Booking | None) -> BookingResult:
-    """The days that fit (no day yet), the free times (availability), or a plan on the day."""
-    if not request.day:  # only an availability question comes without a day
-        if days := _days(request.services, desk):
-            return BookingResult(status="options", options=days)
-        return BookingResult(status="not_possible", reason="No day in the next two weeks has all of these free.")
+    """The earliest openings (no day yet), the free times (availability), or a plan on the day."""
+    if not request.day:  # no day asked for: the earliest openings, within any times asked for
+        if found := _openings(request.services, desk, request):
+            return BookingResult(status="options", options=found)
+        return BookingResult(status="not_possible", reason="No day in the next two weeks has all of these free"
+                             + (f" {_window(request)}." if _window(request) else "."))
     day = date.fromisoformat(request.day)
     if request.intent == "availability":
         return _availability(request, day, desk)
@@ -283,7 +305,7 @@ def _plan(request: BookingRequest, desk: Appointments, replaces: Booking | None)
         fitted = fitted.model_copy(update={"package": request.package, "add_ons": request.add_ons})
         return BookingResult(status="plan_ready", plan=fitted, replaces=confirmation(replaces) if replaces else None)
     return BookingResult(status="not_possible", reason=f"{fitted[0]} {_open(day, desk)}",
-                         options=_days(request.services, desk, request, skip=day))
+                         options=_openings(request.services, desk, request, skip=day))
 
 
 def handle(request: BookingRequest, phone: str, desk: Appointments | None = None) -> BookingResult:
@@ -341,13 +363,12 @@ def _answer(request: BookingRequest, phone: str, desk: Appointments) -> BookingR
 def missing_result(request: BookingRequest, missing: list[str], phone: str,
                    desk: Appointments | None = None) -> BookingResult:
     """What the agent must still ask the customer for, with what helps them answer:
-    their bookings when it is which booking, the days that work when it is the day."""
+    their bookings when it is which booking."""
     desk = desk or get_appointments()
     if "references" in missing:
         return BookingResult(status="needs_info", missing=missing,
                              bookings=[confirmation(b) for b in desk.upcoming(phone)])
-    options = _days(request.services, desk) if "day" in missing and request.services else []
-    return BookingResult(status="needs_info", missing=missing, options=options)
+    return BookingResult(status="needs_info", missing=missing)
 
 
 def describe(result: BookingResult) -> dict[str, Any]:

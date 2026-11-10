@@ -1,7 +1,9 @@
-"""The one shared copy of the parsed business document.
+"""The one shared copy of the parsed business document, and of its booking schedule.
 
-Any part of the app that needs business facts calls `get_knowledge()`:
-booking, the manage page's profile, and the assistants.
+Any part of the app that needs business facts calls `get_knowledge()`: the
+manage page's profile and the assistants. Booking calls `get_schedule()`:
+the schedule read at onboarding (any layout, D35), else the configured
+document's, read by code from SmartDesk's layout.
 It lives here, not in app.py, so that route modules can import it without
 importing app.py (which imports them, and would make a circular import).
 """
@@ -9,6 +11,7 @@ importing app.py (which imports them, and would make a circular import).
 from functools import lru_cache
 from pathlib import Path
 
+from ..booking.schedule import Schedule, read_schedule, schedule_from
 from ..config import get_settings
 from .knowledge import KnowledgeBase
 
@@ -17,6 +20,15 @@ from .knowledge import KnowledgeBase
 def get_knowledge() -> KnowledgeBase:
     """The business document, parsed. Read from disk on the first call only."""
     return KnowledgeBase(document_path())
+
+
+@lru_cache
+def get_schedule() -> Schedule:
+    """What can be booked, with whom, and when. Read once; forgotten on going live and on reset."""
+    from ..onboarding.store import live_schedule  # imported here, as in document_path
+
+    data = live_schedule()
+    return schedule_from(data) if data is not None else read_schedule(get_knowledge())
 
 
 def document_path() -> Path:
