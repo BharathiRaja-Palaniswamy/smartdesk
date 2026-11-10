@@ -73,9 +73,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .hint { font-size: 13px; color: var(--faint); margin-top: 8px; }
 
 /* Complete */
-.done-mark { font-size: 44px; color: var(--good); }
-.snippet { position: relative; background: var(--ink); color: #e9eaf2; border-radius: 10px; padding: 16px; font-family: Menlo, monospace; font-size: 13px; overflow-x: auto; margin: 10px 0 20px; white-space: pre; }
-.next { padding-left: 20px; display: grid; gap: 6px; margin: 10px 0 24px; }
+/* Complete: its styles are in complete.css */
 
 @media (max-width: 640px) {
   .row { grid-template-columns: 1fr; }

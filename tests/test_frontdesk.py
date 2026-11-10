@@ -683,8 +683,9 @@ def test_a_list_written_into_the_answer_is_shown_once_under_it(desk, monkeypatch
 def test_markdown_never_reaches_the_customer(desk, monkeypatch):
     identified(monkeypatch, "thread-md")
     chat(monkeypatch, says("Your upcoming appointment:\n- **Lip Wax** with **Fay Kim**\n- **Time**: 14:00"))
-    assert respond("thread-md", "thanks").answer == ("Your upcoming appointment:\nLip Wax with Fay Kim\n"
-                                                     "Time: 14:00")
+    turn = respond("thread-md", "thanks")
+    assert turn.answer == "Your upcoming appointment:"  # the list goes under it, as a list (with_list)
+    assert [(i.name, i.detail) for i in turn.items] == [("Lip Wax with Fay Kim", ""), ("Time", "14:00")]
 
 
 # ---- a clarifying question, whichever way the reply comes (models/structured.py) ----------------
@@ -1053,3 +1054,29 @@ def test_what_counts_as_the_agent_asking_for_the_yes_itself(reply, asks):
 
     answer = SimpleNamespace(reply=AgentReply(answer=reply, items=[], suggestions=[]), tool_calls=[])
     assert _asks_to_confirm(answer) is asks
+
+
+
+def test_a_list_written_into_the_answer_is_shown_as_a_list():
+    # As seen live: "What services do you offer?" got the services as plain lines in the text, no list.
+    from smartdesk.frontdesk.agent import with_list
+
+    reply = AgentReply(answer="We offer:\n\nFacials: Express Facial, Signature Facial\nMassage Therapy: Swedish Massage\n\n"
+                              "Would you like to book one?", items=[], suggestions=[])
+    shown = with_list(reply)
+    assert [(i.name, i.detail) for i in shown.items] == [("Facials", "Express Facial, Signature Facial"),
+                                                         ("Massage Therapy", "Swedish Massage")]
+    assert shown.answer == "We offer:\n\nWould you like to book one?"
+    one = AgentReply(answer="Note: we open at 10 AM.", items=[], suggestions=[])
+    assert with_list(one).items == []  # a single "Label: text" line is a sentence, not a list
+
+
+
+def test_the_agent_is_given_every_service_with_its_exact_length_and_price(desk):
+    # As seen live: "What do you offer?" was answered as a paragraph, with no lengths or prices.
+    from smartdesk.business.store import get_schedule
+
+    rules = tools.instructions("Asha Rao", "(408) 555-0101")
+    swedish = get_schedule().services["Swedish Massage"]
+    assert f"Swedish Massage ({swedish.category}): {' or '.join(map(str, swedish.minutes))} minutes" in rules
+    assert "give them as `items`" in rules

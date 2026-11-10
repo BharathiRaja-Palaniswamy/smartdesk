@@ -17,6 +17,9 @@
   const base = script.src.replace(/chat\.js(\?.*)?$/, "");
   const key = script.dataset.business || "";
   const OFFER_CHECK_MS = 5000;  // how often an open chat checks for a slot offered from the waitlist
+  const MAX_LINES = 4;  // the message box grows to this many lines, then scrolls
+  const LINE_HEIGHT = 20;  // px, as chat.css sets it for the box
+  const BOX_EDGES = 18;  // px: the box's padding (8 + 8) and border (1 + 1)
 
   /** Load another widget file next to this one. */
   function load(file) {
@@ -66,8 +69,9 @@
 
     const quick = el("div", "quick");
     const form = el("form");
-    const input = el("input");
-    input.type = "text";
+    // A box that grows with the message (up to MAX_LINES), so a long one is never cut off.
+    const input = el("textarea");
+    input.rows = 1;
     input.placeholder = "Type a message";
     input.setAttribute("aria-label", "Message");
     input.maxLength = 500;
@@ -81,11 +85,29 @@
     root.append(style, launcher, panel);
 
     function say(who, text, items = []) {
-      const message = el("p", `msg ${who}`, text);
-      // A list under the answer (services, bookings, times): one line each, as text.
-      items.forEach((item) => message.append(el("span", "item", `${item.name}: ${item.detail}`)));
+      const message = el("div", `msg ${who}`);
+      if (text) message.append(el("p", "text", text));
+      // A list under the answer (services, bookings, times): a bulleted list, the name in bold.
+      if (items.length) {
+        const list = el("ul", "items");
+        items.forEach((item) => {
+          const row = el("li");
+          row.append(el("b", "", item.name));
+          if (item.detail) row.append(document.createTextNode(`: ${item.detail}`));
+          list.append(row);
+        });
+        message.append(list);
+      }
       log.append(message);
       log.scrollTop = log.scrollHeight;
+    }
+
+    /** The message box's height follows its text, up to MAX_LINES; then it scrolls. */
+    function fit() {
+      input.style.height = "auto";
+      // scrollHeight counts the text and padding but not the border, so add the border back.
+      const needed = input.scrollHeight + (input.offsetHeight - input.clientHeight);
+      input.style.height = `${Math.min(needed, LINE_HEIGHT * MAX_LINES + BOX_EDGES)}px`;
     }
 
     function offer(suggestions) {
@@ -121,6 +143,7 @@
       say("me", text);
       quick.replaceChildren();
       input.value = "";
+      fit();
       input.disabled = send.disabled = true;
       const typing = el("p", "msg them typing", "…");
       log.append(typing);
@@ -143,6 +166,7 @@
       launcher.hidden = show;
       if (show) {
         if (!log.children.length) start();
+        fit();  // one line tall until there is more to show
         input.focus();
       } else launcher.focus();
     }
@@ -161,8 +185,17 @@
     close.addEventListener("click", () => open(false));
     panel.addEventListener("keydown", (event) => { if (event.key === "Escape") open(false); });
     form.addEventListener("submit", (event) => { event.preventDefault(); ask(input.value); });
+    input.addEventListener("input", fit);
+    // Enter sends; Shift+Enter starts a new line.
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        ask(input.value);
+      }
+    });
 
-    if (script.dataset.open === "true") open(true);
+    // Opened by the page: only once chat.css has loaded, so the box is measured at its real size.
+    if (script.dataset.open === "true") style.addEventListener("load", () => open(true), { once: true });
   }
 
   load("brain.js")

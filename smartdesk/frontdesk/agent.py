@@ -84,6 +84,9 @@ day. Call join_waitlist with the service, day and time they want: the system the
 confirm, saying how they would hear of a slot ({offered_how}).
 - An offer in this chat ("Offer OF-...") that they answer: call answer_offer with that reference and \
 whether they said yes; tell them what it returns. Their yes to the offer is their confirmation.
+- What we offer, exactly, from the schedule: {services}. When they ask what we offer, for a kind of \
+service or for prices, give them as `items` (one per service: its name, and its length and price exactly as \
+here), with one short sentence as the answer; never write them out as a paragraph.
 - Who offers which service is exactly this, from the schedule: {team}. Name only these people for a \
 service, never anyone else, and do not guess what someone does.
 - To reach the business: {contact}. Give only these when someone needs to contact us; never make up \
@@ -114,6 +117,17 @@ class AgentReply(BaseModel):
 OFFERED = "we will reach out to them on the contact number they gave"
 
 
+def _services() -> str:
+    """Every service with its lengths and prices, exactly as the schedule has them:
+    "Swedish Massage (Massage Therapy): 60 or 90 minutes, $115 / $160"."""
+    def one(service) -> str:
+        minutes = " or ".join(str(m) for m in service.minutes)
+        prices = " / ".join(f"${p}" for p in service.prices)
+        kind = f" ({service.category})" if service.category else ""
+        return f"{service.name}{kind}: {minutes} minutes, {prices}"
+    return "; ".join(one(service) for service in get_schedule().services.values())
+
+
 def _contact() -> str:
     """How customers reach the business, exactly: its phone line (the number its assistant
     answers), else the document's phone, and its email and address as the document gives them."""
@@ -135,7 +149,8 @@ def instructions(name: str, phone: str, channel: str = "chat") -> str:
     # Who offers what, exact: from the schedule (code), so the model never names the wrong person.
     team = "; ".join(f"{person.name}: {', '.join(person.services)}" for person in get_schedule().staff_members.values())
     text = INSTRUCTIONS.format(assistant=assistant, business=get_knowledge().name, name=name, phone=phone,
-                               offered_how=OFFERED, team=team or "no one yet", contact=_contact())
+                               offered_how=OFFERED, team=team or "no one yet", contact=_contact(),
+                               services=_services() or "nothing bookable yet")
     return text + SPOKEN if channel == "voice" else text
 
 
@@ -150,6 +165,43 @@ def time_note() -> str:
 # A line of a list written into the answer: "- Express Facial: ...", "* ...", "1. ...".
 LIST_LINE = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+")
 MARKDOWN = re.compile(r"\*\*|__|`")  # bold and code marks
+
+
+# A line of a list written as "Name: details" ("Facials: Express Facial, Signature Facial").
+LABELLED_LINE = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])?\s*([^:\n]{2,60}):\s+(\S.*)$")
+
+
+def with_list(reply: AgentReply) -> AgentReply:
+    """`reply`, with a list the model wrote into its answer moved to `items`, where the chat
+    shows it as a list: two or more lines in a row that are list lines ("- Swedish Massage",
+    "1. ...") or "Name: details" lines. A reply that already has items is kept as it is."""
+    if reply.items:
+        return reply
+    lines, items, kept, run = reply.answer.splitlines(), [], [], []
+
+    def close_run():
+        nonlocal run
+        if len(run) >= 2:
+            items.extend(run)
+        else:
+            kept.extend(line for line, _ in run)
+        run = []
+
+    for line in lines:
+        text = MARKDOWN.sub("", line).strip()
+        if labelled := LABELLED_LINE.match(text):
+            run.append((line, ReplyItem(name=labelled[1].strip(), detail=labelled[2].strip())))
+        elif LIST_LINE.match(text):
+            run.append((line, ReplyItem(name=LIST_LINE.sub("", text).strip(), detail="")))
+        elif not text and run:
+            continue  # a blank line inside a list
+        else:
+            close_run()
+            kept.append(line)
+    close_run()
+    if not items:
+        return reply
+    return reply.model_copy(update={"answer": "\n".join(kept).strip(), "items": [item for _, item in items]})
 
 
 def answer_text(reply: AgentReply) -> str:

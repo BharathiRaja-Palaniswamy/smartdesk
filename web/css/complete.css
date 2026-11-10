@@ -1,0 +1,26 @@
+/* Step 4, "is live": what went live, as cards. Try it and the phone first (what the
+   owner does next), then the calendars, then the snippet for their own site, full width. */
+
+.done-head { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.done-head .muted { margin: 0; }
+.done-mark { display: grid; place-items: center; flex: 0 0 56px; width: 56px; height: 56px; border-radius: 50%;
+  background: var(--good-soft); color: var(--good); font-size: 28px; font-weight: 700; }
+
+.done-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.done-card { display: flex; flex-direction: column; gap: 8px; background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 20px; }
+.done-card h3 { font-size: 20px; }
+.done-card .muted { font-size: 15px; }
+.done-card .btn { align-self: flex-start; margin-top: auto; }
+.done-card.try { border-color: var(--good); background: var(--good-soft); }
+.done-card.wide { grid-column: 1 / -1; }
+.done-card .phone-number { margin: 0; font-size: 24px; white-space: nowrap; }  /* a number never breaks at its dash */
+
+.snippet { background: var(--ink); color: #e9eaf2; border-radius: 10px; padding: 14px 16px; font-family: Menlo, monospace;
+  font-size: 13px; overflow-x: auto; white-space: pre; }
+
+.done-foot { margin-top: 24px; font-size: 15px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+
+@media (max-width: 760px) {
+  .done-cards { grid-template-columns: 1fr; }
+}

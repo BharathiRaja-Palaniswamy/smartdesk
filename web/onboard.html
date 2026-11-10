@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/onboard.css">
+<link rel="stylesheet" href="css/complete.css">
 </head>
 <body>
 
@@ -145,28 +146,43 @@
 
   <!-- Step 4: onboarding complete -->
   <section class="step" id="complete">
-    <p class="done-mark" aria-hidden="true">✓</p>
-    <h1 id="done-title">You're set up</h1>
-    <p class="muted">Your assistant answers and books from your documents.</p>
-    <a class="btn" href="/web/preview.html" target="_blank" rel="noopener">See it on your website</a>
-    <p class="hint">A preview of your website with the chat added, as your customers will see it. Open a second customer there to try the empty chair.</p>
-    <h3>Add the chat to your website</h3>
-    <p class="muted">Paste this just before <code>&lt;/body&gt;</code> on your site.</p>
-    <pre class="snippet" id="snippet"></pre>
-    <button class="btn ghost" type="button" id="copy">Copy snippet</button>
-    <section class="phone-done">
-      <h3 style="margin-top:28px">Your phone</h3>
-      <p class="phone-number" id="phone-number"></p>
-      <p class="muted" id="phone-note"></p>
-      <h3 style="margin-top:20px">Your calendars</h3>
-      <p class="muted" id="calendars-note"></p>
-    </section>
-    <h3 style="margin-top:28px">Next</h3>
-    <ul class="next muted">
-      <li>Connect your booking calendar</li>
-      <li>Update a document any time: upload it again and it replaces the old version</li>
-    </ul>
-    <a class="btn" href="index.html">Back to home</a>
+    <header class="done-head">
+      <p class="done-mark" aria-hidden="true">✓</p>
+      <div>
+        <h1 id="done-title">You're set up</h1>
+        <p class="muted">Your assistant answers and books from your documents.</p>
+      </div>
+    </header>
+
+    <!-- What is live, one card each: try it, the phone, the calendars, the website snippet. -->
+    <div class="done-cards">
+      <article class="done-card try">
+        <p class="label">Try it</p>
+        <h3>See it on your website</h3>
+        <p class="muted">A mock website with your chat added, as customers will see it.</p>
+        <a class="btn" href="/web/preview.html" target="_blank" rel="noopener">Open the preview</a>
+      </article>
+      <article class="done-card">
+        <p class="label">Phone</p>
+        <p class="phone-number" id="phone-number"></p>
+        <p class="muted" id="phone-note"></p>
+      </article>
+      <article class="done-card">
+        <p class="label">Calendars</p>
+        <h3>Google Calendar</h3>
+        <p class="muted" id="calendars-note"></p>
+      </article>
+      <article class="done-card wide">
+        <p class="label">Your website</p>
+        <h3>Add the chat to your site</h3>
+        <p class="muted">Paste this just before <code>&lt;/body&gt;</code>.</p>
+        <pre class="snippet" id="snippet"></pre>
+        <button class="btn ghost" type="button" id="copy">Copy snippet</button>
+      </article>
+    </div>
+
+    <p class="done-foot muted">To change anything, upload a document again: it replaces the old version.
+      <a href="index.html">Back to home</a></p>
 
   </section>
 

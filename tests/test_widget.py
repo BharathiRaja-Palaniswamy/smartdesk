@@ -37,7 +37,23 @@ def test_the_preview_gives_the_widget_key_to_the_owner_only(monkeypatch):
 
     monkeypatch.setenv("SMARTDESK_WIDGET_KEY", "pub_test_123")
     assert TestClient(app).get("/api/onboarding/preview").status_code == 401
-    assert signed_in(app).get("/api/onboarding/preview").json() == {"key": "pub_test_123"}
+    preview = signed_in(app).get("/api/onboarding/preview").json()
+    assert preview["key"] == "pub_test_123"
+
+
+def test_the_preview_website_shows_the_business_s_own_facts():
+    """The stand-in website is filled from the schedule and document, nothing made up."""
+    from conftest import signed_in
+
+    from smartdesk.business.store import get_knowledge, get_schedule
+
+    site = signed_in(app).get("/api/onboarding/preview").json()["site"]
+    schedule = get_schedule()
+    assert site["name"] == get_knowledge().name
+    assert [s["name"] for s in site["services"]] == list(schedule.services)
+    assert site["team"] == list(schedule.staff_members)
+    assert [day["day"] for day in site["hours"]][0] == "Monday" and len(site["hours"]) == 7
+    assert all(":" not in day["time"] or "M" in day["time"] for day in site["hours"])  # 12-hour times
 
 
 def test_the_memory_calendar_is_chosen_by_setting(monkeypatch):

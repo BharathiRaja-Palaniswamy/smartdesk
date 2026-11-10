@@ -12,7 +12,7 @@
     snippet.textContent = SD.snippet;
     document.getElementById("phone-number").textContent = SD.phone || "Not answered yet";
     document.getElementById("phone-note").textContent = SD.phone
-      ? "Your assistant answers calls to your business number, and calls customers on your waitlist when a slot opens."
+      ? "Your assistant answers this number, and calls waitlisted customers when a slot opens."
       : SD.phoneProblem || "";
     document.getElementById("calendars-note").textContent = SD.calendars || "";
     SD.showLive();  // the business is live now: its card shows in the header (reset.js)

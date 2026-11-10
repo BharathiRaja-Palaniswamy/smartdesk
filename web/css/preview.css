@@ -1,28 +1,95 @@
-/* The owner's preview: a plain stand-in website, with its own styles, under a
-   bar that says it is a preview. The widget draws itself in a Shadow DOM, so
-   none of this reaches it. */
+/* The owner's preview: a calm stand-in website, with its own styles, under a
+   bar that says it is a preview. Warm sand, deep green ink, a serif for headings:
+   quiet enough for a spa, a barbershop or a studio. The widget draws itself in a
+   Shadow DOM, so none of this reaches it. */
 
-body { margin: 0; font-family: Georgia, serif; background: #f6f3ee; color: #2d2a26; }
-
-.preview-bar {
-  position: sticky; top: 0; z-index: 1; margin: 0;
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
-  padding: 10px 16px; background: #fff3cd; border-bottom: 1px solid #ecd9a0;
-  font-family: system-ui, sans-serif; font-size: 14px;
+:root {
+  --sand: #F4EFE7;
+  --stone: #E9E1D4;
+  --card: #FBF8F3;
+  --ink: #2E3A33;
+  --muted: #6B7368;
+  --sage: #7D8E78;
+  --clay: #B07A5A;
+  --rule: #D9CFBF;
+  --serif: "Cormorant Garamond", Georgia, serif;
+  --sans: "Inter", system-ui, sans-serif;
 }
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--sans); background: var(--sand); color: var(--ink); line-height: 1.6; }
+h1, h2 { font-family: var(--serif); font-weight: 600; letter-spacing: 0.01em; }
+a { color: inherit; }
+
+/* The preview bar: SmartDesk's, not the website's. */
+.preview-bar {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 10px 16px; background: #fff3cd; border-bottom: 1px solid #ecd9a0;
+  font-family: system-ui, sans-serif; font-size: 14px; color: #3d3220;
+}
+.preview-bar > span { flex: 1 1 320px; }
 .preview-bar button {
   font: inherit; font-weight: 600; padding: 6px 12px; border-radius: 8px;
   border: 1px solid #b08a2e; background: #fff; color: #5c4510; cursor: pointer;
 }
 .preview-bar button:hover { background: #fdf6e3; }
 
-.site-hero { padding: 64px 16px; text-align: center; background: #dfe8e1; }
-.site-kicker { margin: 0 0 6px; font-family: system-ui, sans-serif; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #5d6b61; }
-.site-hero h1 { font-size: clamp(32px, 6vw, 46px); margin: 0 0 8px; }
-.site-hero p { margin: 0; font-size: 18px; }
+/* The website. */
+.site-nav { display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  max-width: 1080px; margin: 0 auto; padding: 22px 24px; }
+.site-mark { font-family: var(--serif); font-size: 26px; font-weight: 600; }
+.site-links { display: flex; gap: 24px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
+.site-links a { text-decoration: none; color: var(--muted); }
+.site-links a:hover { color: var(--ink); }
 
-.site-body { max-width: 720px; margin: 0 auto; padding: 32px 16px 140px; font-size: 18px; line-height: 1.6; }
-.try { background: #fff; border: 1px solid #e3ddd2; border-radius: 12px; padding: 20px 24px; font-family: system-ui, sans-serif; font-size: 16px; }
-.try h2 { margin: 0 0 8px; font-size: 18px; }
-.try ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
-.error { color: #a3302a; font-family: system-ui, sans-serif; font-size: 15px; }
+.site-hero { max-width: 1080px; margin: 0 auto; padding: 72px 24px 96px;
+  display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 24px; }
+.kicker { margin: 0 0 12px; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); }
+.site-hero h1 { margin: 0 0 16px; font-size: clamp(48px, 8vw, 88px); line-height: 1; }
+.lede { margin: 0 0 20px; max-width: 30em; font-size: 18px; color: var(--muted); }
+.hero-phone { margin: 0; font-size: 15px; letter-spacing: 0.04em; color: var(--clay); }
+
+/* Three smooth stones: decoration only, drawn in CSS. */
+.stones { position: relative; height: 320px; }
+.stones i { position: absolute; display: block; border-radius: 50%; }
+.stones i:nth-child(1) { width: 260px; height: 190px; right: 20px; bottom: 10px; background: radial-gradient(circle at 35% 30%, #CBD3C3, var(--sage)); }
+.stones i:nth-child(2) { width: 190px; height: 130px; right: 70px; bottom: 165px; background: radial-gradient(circle at 35% 30%, #EBDCCB, #C9AF92); }
+.stones i:nth-child(3) { width: 120px; height: 82px; right: 110px; bottom: 270px; background: radial-gradient(circle at 35% 30%, #F3ECE2, #D8CBB8); }
+
+.band { max-width: 1080px; margin: 0 auto; padding: 64px 24px; }
+.band.soft { max-width: none; background: var(--stone); }
+.band.soft > * { max-width: 1032px; margin-left: auto; margin-right: auto; }
+.band h2 { margin: 0 0 32px; font-size: 44px; }
+
+/* The services menu: one group per category, dotted leaders to the price. */
+.menu { columns: 2 340px; column-gap: 56px; }
+.group { break-inside: avoid; margin: 0 0 36px; }
+.group h3 { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+  font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--sage); }
+.item { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
+.item .name { font-family: var(--serif); font-size: 21px; font-weight: 600; }
+.item .dots { flex: 1; min-width: 16px; border-bottom: 1px dotted var(--rule); transform: translateY(-4px); }
+.item .length { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.item .price { font-size: 15px; font-weight: 500; white-space: nowrap; }
+
+.team { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 28px; }
+.team li { text-align: center; font-family: var(--serif); font-size: 20px; font-weight: 600; }
+.team .face { display: grid; place-items: center; width: 96px; height: 96px; margin: 0 auto 12px; border-radius: 50%;
+  background: var(--card); color: var(--sage); font-size: 32px; border: 1px solid var(--rule); }
+
+.visit { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+.hours { border-collapse: collapse; width: 100%; font-size: 16px; }
+.hours td { padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.hours td + td { text-align: right; color: var(--muted); }
+address { font-style: normal; font-size: 17px; display: grid; gap: 10px; align-content: start; }
+address strong { font-family: var(--serif); font-size: 24px; }
+
+.site-foot { padding: 32px 24px 120px; text-align: center; font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); }
+.error { max-width: 1080px; margin: 0 auto; padding: 0 24px; color: #a3302a; font-size: 15px; }
+
+@media (max-width: 720px) {
+  .site-hero, .visit { grid-template-columns: 1fr; }
+  .stones { display: none; }
+  .site-links { display: none; }
+}

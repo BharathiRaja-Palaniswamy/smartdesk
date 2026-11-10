@@ -35,7 +35,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from ..replies import MAX_SUGGESTIONS, ReplyItem
 from .debug import steps
 from .flow import get_graph
-from .agent import answer_text, time_note
+from .agent import answer_text, time_note, with_list
 from .rules import WAIT_FOR_NEWER, plain_quotes
 from .staff import HANDOVER, record_handoff
 from .turns import (
@@ -135,7 +135,7 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
         return Turn(state["say"], suggestions=CHOICES[state["pending"]["kind"]], confirming=True)
     if state["say"]:
         return Turn(state["say"], suggestions=state.get("suggestions", []))
-    reply = state["reply"]
+    reply = with_list(state["reply"])  # a list written into the answer is shown as a list
     return Turn(answer_text(reply), reply.items, reply.suggestions[:MAX_SUGGESTIONS])
 
 

@@ -5,34 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your Website Preview</title>
 <!-- The owner's preview (D33): a stand-in for the business's own website with
-     its SmartDesk chat added, exactly as the snippet adds it. Each tab is a
-     different customer, so the empty chair can be tried with two tabs. -->
+     its SmartDesk chat added, exactly as the snippet adds it. Every word on it
+     comes from the business's own documents (site.py), so it fits any business.
+     Each tab is a different customer. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="css/preview.css">
 </head>
 <body>
-<p class="preview-bar" role="note">
-  <span><strong>Preview</strong> · how your customers see your chat. Bookings made here are real: cancel them when you're done.</span>
+<div class="preview-bar" role="note">
+  <span><strong>Mock website by SmartDesk</strong> · made from your documents to show how customers see your chat.
+    Bookings made here are real: cancel them when you're done.</span>
   <button type="button" id="another">Open another customer</button>
-</p>
+</div>
+
+<nav class="site-nav">
+  <span class="site-mark" id="nav-name">Your business</span>
+  <span class="site-links"><a href="#services">Services</a><a href="#team">Team</a><a href="#visit">Visit</a></span>
+</nav>
 
 <header class="site-hero">
-  <p class="site-kicker">Your website</p>
-  <h1 id="site-name">Your business</h1>
-  <p id="site-greeting">Open the chat at the bottom right.</p>
+  <div class="hero-text">
+    <p class="kicker" id="site-kinds">Welcome</p>
+    <h1 id="site-name">Your business</h1>
+    <p class="lede">Book your time with us any hour of the day. Just ask our assistant in the chat.</p>
+    <p class="hero-phone" id="site-phone"></p>
+  </div>
+  <div class="stones" aria-hidden="true"><i></i><i></i><i></i></div>
 </header>
 
-<main class="site-body">
-  <section class="try" aria-labelledby="try-title">
-    <h2 id="try-title">Try the empty chair</h2>
-    <ol>
-      <li>Here, book an appointment as one customer.</li>
-      <li>Open another customer and ask for the same time. It's taken, so join the waitlist.</li>
-      <li>Back here, cancel your booking.</li>
-      <li>Within a few seconds the other customer is offered the slot. Say yes, and it's booked.</li>
-    </ol>
+<main>
+  <section class="band" id="services" aria-labelledby="services-title">
+    <h2 id="services-title">Services</h2>
+    <div class="menu" id="services-list"></div>
+  </section>
+
+  <section class="band soft" id="team" aria-labelledby="team-title">
+    <h2 id="team-title">Our team</h2>
+    <ul class="team" id="team-list"></ul>
+  </section>
+
+  <section class="band" id="visit" aria-labelledby="visit-title">
+    <h2 id="visit-title">Visit us</h2>
+    <div class="visit">
+      <table class="hours"><tbody id="hours-list"></tbody></table>
+      <address id="contact"></address>
+    </div>
   </section>
   <p class="error" id="preview-error" role="alert"></p>
 </main>
+
+<footer class="site-foot" id="site-foot"></footer>
 
 <script src="js/preview.js"></script>
 </body>

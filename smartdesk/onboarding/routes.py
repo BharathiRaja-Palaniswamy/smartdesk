@@ -4,7 +4,8 @@
   POST /api/onboarding/check    the safety check on the draft (safety.py) -> what it found, if anything
   POST /api/onboarding/booking  what the draft says about booking (booking.py): services, team,
                                 hours, in any layout (D35) -> a one-line headline, what was left out
-  GET  /api/onboarding/preview  the widget key, for the owner's preview of their website (D33)
+  GET  /api/onboarding/preview  the widget key and the business's own facts (services, team,
+                                hours, contact), for the owner's preview of their website (D33)
   GET  /api/onboarding/live     whether a business is onboarded here, and its name (the page's reset card)
   POST /api/onboarding/go-live  {"number": the business's number} -> the checked draft becomes the
                                 business's document, its number is answered by its own agent
@@ -35,6 +36,7 @@ from ..business.knowledge import KnowledgeBase
 from .booking import read_booking
 from .readers import Unreadable, read, titled
 from .safety import check, clean
+from .site import Site, site
 from .store import (Blocked, checked, draft_path, draft_text, go_live, live_document, live_phone, ready, reset,
                     save_check, save_draft, save_schedule)
 
@@ -79,6 +81,7 @@ class Onboarded(BaseModel):
 
 class Preview(BaseModel):
     key: str  # the widget key the business's snippet carries
+    site: Site  # what the stand-in website shows: the business's own facts
 
 
 class GoLive(BaseModel):
@@ -173,7 +176,7 @@ def onboarded() -> Onboarded:
 def preview() -> Preview:
     """The key the preview page adds the widget with, as the owner's website would.
     The preview is the live assistant: its bookings are real (D33)."""
-    return Preview(key=get_settings().widget_key)
+    return Preview(key=get_settings().widget_key, site=site())
 
 
 @router.post("/go-live")

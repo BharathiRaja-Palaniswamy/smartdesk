@@ -10,7 +10,7 @@ from ..config import get_settings
 
 router = APIRouter(prefix="/api/widget")
 
-SUGGESTIONS = ["What do you offer?", "Book an appointment", "Opening hours"]
+SUGGESTIONS = ["What services do you offer?", "Book an appointment", "Opening hours"]
 
 
 class WidgetBusiness(BaseModel):

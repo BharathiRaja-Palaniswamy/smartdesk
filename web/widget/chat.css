@@ -2,11 +2,18 @@
    reaches the business's page, and nothing there reaches the widget. */
 
 :host {
-  --ink: #1b2340;
-  --muted: #5a6078;
-  --accent: #7a3b6e;
-  --soft: #f4e9f1;
-  --line: #e2dfe6;
+  /* A calm, warm palette that sits quietly on a business's site: deep green frames the chat,
+     sage marks what the customer does (their messages, Send, suggestions), warm stone holds
+     the replies. Text on every colour here passes WCAG AA contrast (4.5:1 or more). */
+  --ink: #2E3A33;
+  --muted: #6B7368;
+  --frame: #2E3A33;
+  --accent: #56695A;
+  --accent-soft: #E8EDE4;
+  --soft: #EFE8DC;
+  --line: #E3DACB;
+  --paper: #FBF8F3;
+  --serif: "Cormorant Garamond", Georgia, serif;
   all: initial;
   font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   font-size: 15px;
@@ -25,10 +32,10 @@ button { font: inherit; cursor: pointer; }
   height: 60px;
   border: 0;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  background: var(--frame);
+  color: #FCFCFA;
   font-size: 26px;
-  box-shadow: 0 6px 20px rgba(27, 35, 64, 0.25);
+  box-shadow: 0 6px 20px rgba(46, 58, 51, 0.25);
   z-index: 2147483000;
 }
 
@@ -38,10 +45,10 @@ button { font: inherit; cursor: pointer; }
   bottom: 20px;
   width: 360px;
   height: min(560px, calc(100vh - 40px));
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(27, 35, 64, 0.22);
+  box-shadow: 0 12px 40px rgba(46, 58, 51, 0.22);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -49,32 +56,44 @@ button { font: inherit; cursor: pointer; }
 }
 
 header {
-  background: var(--accent);
-  color: #fff;
+  background: var(--frame);
+  color: #FCFCFA;
   padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 header div { display: grid; }
+header strong { font-family: var(--serif); font-size: 21px; font-weight: 600; line-height: 1.15; }
 header span { font-size: 12px; opacity: 0.85; }
-.close { border: 0; background: none; color: #fff; font-size: 24px; line-height: 1; }
+.close { border: 0; background: none; color: #FCFCFA; font-size: 24px; line-height: 1; }
 
 .log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.msg { margin: 0; padding: 9px 13px; border-radius: 14px; max-width: 82%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg { margin: 0; padding: 9px 13px; border-radius: 14px; max-width: 82%; overflow-wrap: anywhere; }
+.msg .text { margin: 0; white-space: pre-wrap; }
 .msg.them { background: var(--soft); align-self: flex-start; border-bottom-left-radius: 4px; }
-.msg.me { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg.me { background: var(--accent); color: #FCFCFA; align-self: flex-end; border-bottom-right-radius: 4px; }
 .msg.typing { color: var(--muted); }
-.msg .item { display: block; margin-top: 4px; font-size: 14px; }
+.msg .items { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.45; }
+.msg .items li { margin-top: 3px; }
+.msg .items li::marker { color: var(--accent); }
 
-.quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
-.chip { border: 1px solid var(--accent); background: #fff; color: var(--accent); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+/* Suggestions sit in one row that scrolls sideways, so they never push the conversation up. */
+.quick { display: flex; gap: 6px; padding: 0 16px 10px; overflow-x: auto; scrollbar-width: none;
+  mask-image: linear-gradient(to right, #000 85%, transparent); }  /* the fade says "more this way" */
+.quick::-webkit-scrollbar { display: none; }
+.quick:empty { display: none; }
+.chip { flex: none; white-space: nowrap; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.chip:hover { background: var(--accent); color: #FCFCFA; }
 
 form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
-input { flex: 1; font: inherit; border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; color: var(--ink); }
-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.send { border: 0; background: var(--accent); color: #fff; border-radius: 999px; padding: 0 16px; font-weight: 600; }
-.send:disabled, input:disabled { opacity: 0.5; }
+/* border-box: the height chat.js sets is the whole box, so one line is exactly 38px, like Send. */
+textarea { box-sizing: border-box; flex: 1; font: inherit; line-height: 20px; border: 1px solid var(--line); border-radius: 18px; padding: 8px 14px;
+  color: var(--ink); resize: none; overflow-y: auto; max-height: 98px; }
+textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.send { border: 0; background: var(--accent); color: #FCFCFA; border-radius: 999px; padding: 0 16px; font-weight: 600; }
+.send { align-self: flex-end; height: 38px; }
+.send:disabled, textarea:disabled { opacity: 0.5; }
 
 .note { margin: 0; padding: 6px 12px 10px; font-size: 11px; color: var(--muted); text-align: center; }
 
